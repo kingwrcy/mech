@@ -9,8 +9,6 @@ import (
    "os"
 )
 
-const topics = "https://api.github.com/repos/hr8/mech/topics"
-
 var names = []string{
    "youtube",
    "soundcloud",
@@ -48,11 +46,14 @@ func main() {
    if err != nil {
       panic(err)
    }
-   req, err := http.NewRequest("PUT", topics, bytes.NewReader(buf))
+   info, err := userinfo()
    if err != nil {
       panic(err)
    }
-   info, err := userinfo()
+   req, err := http.NewRequest(
+      "PUT", "https://api.github.com/repos/" + info.Username() + "/mech/topics",
+      bytes.NewReader(buf),
+   )
    if err != nil {
       panic(err)
    }
