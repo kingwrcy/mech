@@ -21,7 +21,7 @@ func main() {
    // e
    flag.StringVar(&f.email, "e", "", "email")
    // f
-   flag.Int64Var(&f.bandwidth, "f", 2052370, "video bandwidth")
+   flag.Int64Var(&f.bandwidth, "f", 2767479, "video bandwidth")
    // g
    flag.StringVar(&f.name, "g", "English", "audio name")
    // i
