@@ -22,14 +22,14 @@ func Get_ID(input string) string {
 }
 
 type Asset struct {
-   AppleContentId string
+   Air_Date int64 `json:"airDate"`
+   Apple_Content_ID string `json:"appleContentId"`
+   Duration int64
+   Play_Session struct {
+      URL string
+   } `json:"playSession"`
    Series string
    Title string
-   AirDate int64
-   Duration int64
-   PlaySession struct {
-      URL string
-   }
 }
 
 func New_Asset(id string) (*Asset, error) {
@@ -41,11 +41,11 @@ func New_Asset(id string) (*Asset, error) {
       return nil, err
    }
    defer res.Body.Close()
-   asset := new(Asset)
-   if err := json.NewDecoder(res.Body).Decode(asset); err != nil {
+   a := new(Asset)
+   if err := json.NewDecoder(res.Body).Decode(a); err != nil {
       return nil, err
    }
-   return asset, nil
+   return a, nil
 }
 
 func (a Asset) Get_Duration() time.Duration {
@@ -53,25 +53,22 @@ func (a Asset) Get_Duration() time.Duration {
 }
 
 func (a Asset) Get_Time() time.Time {
-   return time.UnixMilli(a.AirDate)
+   return time.UnixMilli(a.Air_Date)
 }
 
 func (a Asset) String() string {
-   var buf strings.Builder
-   write := func(str string) {
-      buf.WriteString(str)
-   }
-   write("ID: ")
-   write(a.AppleContentId)
-   write("\nSeries: ")
-   write(a.Series)
-   write("\nTitle: ")
-   write(a.Title)
-   write("\nDate: ")
-   write(a.Get_Time().String())
-   write("\nDuration: ")
-   write(a.Get_Duration().String())
-   return buf.String()
+   var b strings.Builder
+   b.WriteString("ID: ")
+   b.WriteString(a.Apple_Content_ID)
+   b.WriteString("\nSeries: ")
+   b.WriteString(a.Series)
+   b.WriteString("\nTitle: ")
+   b.WriteString(a.Title)
+   b.WriteString("\nDate: ")
+   b.WriteString(a.Get_Time().String())
+   b.WriteString("\nDuration: ")
+   b.WriteString(a.Get_Duration().String())
+   return b.String()
 }
 
 type Media struct {
@@ -79,13 +76,13 @@ type Media struct {
    URL *string
 }
 
-func (p Profile) Media(asset *Asset) (*Media, error) {
-   req, err := http.NewRequest("GET", asset.PlaySession.URL, nil)
+func (p Profile) Media(a *Asset) (*Media, error) {
+   req, err := http.NewRequest("GET", a.Play_Session.URL, nil)
    if err != nil {
       return nil, err
    }
    req.Header = http.Header{
-      "X-Claims-Token": {p.ClaimsToken},
+      "X-Claims-Token": {p.Claims_Token},
       "X-Forwarded-For": {forwarded_for},
    }
    res, err := Client.Do(req)

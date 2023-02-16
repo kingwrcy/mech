@@ -91,7 +91,7 @@ func (l Login) Web_Token() (*Web_Token, error) {
 }
 
 type Over_The_Top struct {
-   AccessToken string
+   Access_Token string `json:"accessToken"`
 }
 
 func (o Over_The_Top) Profile() (*Profile, error) {
@@ -101,7 +101,7 @@ func (o Over_The_Top) Profile() (*Profile, error) {
    if err != nil {
       return nil, err
    }
-   req.Header.Set("OTT-Access-Token", o.AccessToken)
+   req.Header.Set("OTT-Access-Token", o.Access_Token)
    res, err := Client.Do(req)
    if err != nil {
       return nil, err
@@ -116,7 +116,7 @@ func (o Over_The_Top) Profile() (*Profile, error) {
 
 type Profile struct {
    Tier string
-   ClaimsToken string
+   Claims_Token string `json:"claimsToken"`
 }
 
 type Web_Token struct {

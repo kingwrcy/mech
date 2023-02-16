@@ -68,7 +68,7 @@ func (s Stream) DASH_Get(items dash.Representations, index int) error {
    pro := http.Progress_Chunks(file, len(media))
    dec := mp4.New_Decrypt(pro)
    var key []byte
-   if item.ContentProtection != nil {
+   if item.Content_Protection != nil {
       private_key, err := os.ReadFile(s.Private_Key)
       if err != nil {
          return err
@@ -77,7 +77,7 @@ func (s Stream) DASH_Get(items dash.Representations, index int) error {
       if err != nil {
          return err
       }
-      key_ID, err := widevine.Key_ID(item.ContentProtection.Default_KID)
+      key_ID, err := widevine.Key_ID(item.Content_Protection.Default_KID)
       if err != nil {
          return err
       }
@@ -110,7 +110,7 @@ func (s Stream) DASH_Get(items dash.Representations, index int) error {
          return err
       }
       pro.Add_Chunk(res.ContentLength)
-      if item.ContentProtection != nil {
+      if item.Content_Protection != nil {
          err = dec.Segment(res.Body, key)
       } else {
          _, err = io.Copy(pro, res.Body)

@@ -20,7 +20,7 @@ func (f flags) dash(preview *paramount.Preview) error {
       return err
    }
    audio := reps.Filter(func(r dash.Representation) bool {
-      if r.MimeType != "audio/mp4" {
+      if r.MIME_Type != "audio/mp4" {
          return false
       }
       if r.Role() == "description" {
