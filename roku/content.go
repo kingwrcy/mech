@@ -8,6 +8,41 @@ import (
    "time"
 )
 
+type Content struct {
+   Meta struct {
+      ID string
+      MediaType string
+   }
+   Title string
+   Series struct {
+      Title string
+   }
+   SeasonNumber string
+   EpisodeNumber string
+   ReleaseDate string
+   RunTimeSeconds int64
+   ViewOptions []struct {
+      License string
+      Media struct {
+         Videos []Video
+      }
+   }
+}
+
+func (c Content) Name() string {
+   var buf strings.Builder
+   if c.Meta.MediaType == "episode" {
+      buf.WriteString(c.Series.Title)
+      buf.WriteByte('-')
+      buf.WriteString(c.SeasonNumber)
+      buf.WriteByte('-')
+      buf.WriteString(c.EpisodeNumber)
+      buf.WriteByte('-')
+   }
+   buf.WriteString(c.Title)
+   return buf.String()
+}
+
 func (c Content) String() string {
    var buf strings.Builder
    write := func(str string) {
@@ -31,20 +66,6 @@ func (c Content) String() string {
    write(c.ReleaseDate)
    write("\nDuration: ")
    write(c.Duration().String())
-   return buf.String()
-}
-
-func (c Content) Name() string {
-   var buf strings.Builder
-   if c.Meta.MediaType == "episode" {
-      buf.WriteString(c.Series.Title)
-      buf.WriteByte('-')
-      buf.WriteString(c.SeasonNumber)
-      buf.WriteByte('-')
-      buf.WriteString(c.EpisodeNumber)
-      buf.WriteByte('-')
-   }
-   buf.WriteString(c.Title)
    return buf.String()
 }
 
@@ -108,25 +129,4 @@ func (c Content) HLS() (*Video, error) {
       }
    }
    return nil, errors.New("drmAuthentication")
-}
-
-type Content struct {
-   Meta struct {
-      ID string
-      MediaType string
-   }
-   Title string
-   Series struct {
-      Title string
-   }
-   SeasonNumber string
-   EpisodeNumber string
-   ReleaseDate string
-   RunTimeSeconds int64
-   ViewOptions []struct {
-      License string
-      Media struct {
-         Videos []Video
-      }
-   }
 }
