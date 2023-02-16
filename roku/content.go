@@ -8,65 +8,69 @@ import (
    "time"
 )
 
+func (c Content) Name() string {
+   var b strings.Builder
+   if c.Meta.Media_Type == "episode" {
+      b.WriteString(c.Series.Title)
+      b.WriteByte('-')
+      b.WriteString(c.Season_Number)
+      b.WriteByte('-')
+      b.WriteString(c.Episode_Number)
+      b.WriteByte('-')
+   }
+   b.WriteString(c.Title)
+   b.WriteByte('-')
+   b.WriteString(c.Year())
+   return b.String()
+}
+
+func (c Content) Year() string {
+   year, _, _ := strings.Cut(c.Release_Date, "-")
+   return year
+}
+
 type Content struct {
+   Episode_Number string `json:"episodeNumber"`
    Meta struct {
       ID string
-      MediaType string
+      Media_Type string `json:"mediaType"`
    }
-   Title string
+   Release_Date string `json:"releaseDate"` // 2007-01-01T000000Z
+   Run_Time_Seconds int64 `json:"runTimeSeconds"`
+   Season_Number string `json:"seasonNumber"`
    Series struct {
       Title string
    }
-   SeasonNumber string
-   EpisodeNumber string
-   ReleaseDate string
-   RunTimeSeconds int64
-   ViewOptions []struct {
+   Title string
+   View_Options []struct {
       License string
       Media struct {
          Videos []Video
       }
-   }
-}
-
-func (c Content) Name() string {
-   var buf strings.Builder
-   if c.Meta.MediaType == "episode" {
-      buf.WriteString(c.Series.Title)
-      buf.WriteByte('-')
-      buf.WriteString(c.SeasonNumber)
-      buf.WriteByte('-')
-      buf.WriteString(c.EpisodeNumber)
-      buf.WriteByte('-')
-   }
-   buf.WriteString(c.Title)
-   return buf.String()
+   } `json:"viewOptions"`
 }
 
 func (c Content) String() string {
-   var buf strings.Builder
-   write := func(str string) {
-      buf.WriteString(str)
+   var b strings.Builder
+   b.WriteString("ID: ")
+   b.WriteString(c.Meta.ID)
+   b.WriteString("\nType: ")
+   b.WriteString(c.Meta.Media_Type)
+   b.WriteString("\nTitle: ")
+   b.WriteString(c.Title)
+   if c.Meta.Media_Type == "episode" {
+      b.WriteString("\nSeries: ")
+      b.WriteString(c.Series.Title)
+      b.WriteString("\nSeason: ")
+      b.WriteString(c.Season_Number)
+      b.WriteString("\nEpisode: ")
+      b.WriteString(c.Episode_Number)
    }
-   write("ID: ")
-   write(c.Meta.ID)
-   write("\nType: ")
-   write(c.Meta.MediaType)
-   write("\nTitle: ")
-   write(c.Title)
-   if c.Meta.MediaType == "episode" {
-      write("\nSeries: ")
-      write(c.Series.Title)
-      write("\nSeason: ")
-      write(c.SeasonNumber)
-      write("\nEpisode: ")
-      write(c.EpisodeNumber)
-   }
-   write("\nDate: ")
-   write(c.ReleaseDate)
-   write("\nDuration: ")
-   write(c.Duration().String())
-   return buf.String()
+   b.WriteString("\nDate: ")
+   b.WriteString(c.Release_Date)
+   b.WriteString("\nDuration: ")
+   b.WriteString(c.Duration().String())
+   return b.String()
 }
 
 func New_Content(id string) (*Content, error) {
@@ -104,13 +108,13 @@ func New_Content(id string) (*Content, error) {
 }
 
 func (c Content) Duration() time.Duration {
-   return time.Duration(c.RunTimeSeconds) * time.Second
+   return time.Duration(c.Run_Time_Seconds) * time.Second
 }
 
 func (c Content) DASH() *Video {
-   for _, opt := range c.ViewOptions {
+   for _, opt := range c.View_Options {
       for _, vid := range opt.Media.Videos {
-         if vid.VideoType == "DASH" {
+         if vid.Video_Type == "DASH" {
             return &vid
          }
       }
@@ -119,10 +123,10 @@ func (c Content) DASH() *Video {
 }
 
 func (c Content) HLS() (*Video, error) {
-   for _, opt := range c.ViewOptions {
+   for _, opt := range c.View_Options {
       for _, vid := range opt.Media.Videos {
-         if vid.DrmAuthentication == nil {
-            if vid.VideoType == "HLS" {
+         if vid.DRM_Authentication == nil {
+            if vid.Video_Type == "HLS" {
                return &vid, nil
             }
          }

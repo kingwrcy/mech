@@ -10,13 +10,13 @@ import (
 type Playback struct {
    DRM struct {
       Widevine struct {
-         LicenseServer string
+         License_Server string `json:"licenseServer"`
       }
    }
 }
 
 func (p Playback) Request_URL() string {
-   return p.DRM.Widevine.LicenseServer
+   return p.DRM.Widevine.License_Server
 }
 
 func (Playback) Request_Header() http.Header {
@@ -71,9 +71,9 @@ func (c Cross_Site) Playback(id string) (*Playback, error) {
 }
 
 type Video struct {
-   DrmAuthentication *struct{}
-   VideoType string
+   DRM_Authentication *struct{} `json:"drmAuthentication"`
    URL string
+   Video_Type string `json:"videoType"`
 }
 
 func New_Cross_Site() (*Cross_Site, error) {
