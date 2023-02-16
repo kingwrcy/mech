@@ -43,4 +43,4 @@ found this:
 
 https://reddit.com/r/mullvadvpn/comments/o1lset/-/ibs4j4m
 
-same result.
+same result. So we can still consider Disney+, but only for United States videos.
