@@ -1,5 +1,7 @@
 # Paramount+
 
+https://justwatch.com/us/provider/paramount-plus
+
 ## Android client
 
 ~~~

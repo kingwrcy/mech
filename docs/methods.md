@@ -63,17 +63,15 @@ $env:SSL_CERT_FILE = 'C:\Users\Steven\.mitmproxy\mitmproxy-ca.pem'
 
 ## Geo block
 
-~~~
-set modify_headers '/~u vod.stream/X-Forwarded-For/25.0.0.0'
-~~~
-
-or for all:
+Norway:
 
 ~~~
-set modify_headers '/~q/X-Forwarded-For/25.0.0.0'
+set modify_headers '/~q/X-Forwarded-For/84.208.0.0'
+set modify_headers '/~u vod.stream/X-Forwarded-For/84.208.0.0'
 ~~~
 
-https://docs.mitmproxy.org/stable/overview-features
+- <https://github.com/ytdl-org/youtube-dl/blob/dd9aa74b/youtube_dl/utils.py#L5334-L5573>
+- https://docs.mitmproxy.org/stable/overview-features
 
 ## APK
 

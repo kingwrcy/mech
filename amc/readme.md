@@ -1,4 +1,4 @@
-# AMC
+# AMC+
 
 > Take a couple breaths of air.\
 > This is the same air that my family is breathing.\
@@ -6,6 +6,8 @@
 > Lets take care of this.
 >
 > [Nightmares on Wax (2018)](//youtube.com/watch?v=Vc-XzhnwpVc)
+
+https://justwatch.com/us/provider/amc
 
 ## Android client
 

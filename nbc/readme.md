@@ -9,6 +9,8 @@
 >
 > [Wading in Waist-High Water (2020)](https://youtube.com/watch?v=tqVxd57H-cA)
 
+https://justwatch.com/us/provider/nbc
+
 ## Android client
 
 ~~~
