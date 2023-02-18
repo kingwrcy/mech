@@ -1,6 +1,4 @@
-# Docs
-
-## Android Studio
+# Android Studio
 
 First download the package [1]. Start the program, and click "More Actions",
 "AVD Manager", "Create Virtual Device". On the "Select Hardware" screen, click

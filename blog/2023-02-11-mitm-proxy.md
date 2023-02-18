@@ -1,6 +1,4 @@
-# Docs
-
-## MITM Proxy
+# MITM Proxy
 
 First download [1], then start `mitmproxy.exe`. Address and port should be in
 the bottom right corner. Default should be:

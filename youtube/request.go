@@ -8,7 +8,7 @@ import (
 
 const (
    // com.google.android.youtube
-   android_version = "18.04.35"
+   android_version = "18.06.35"
    api_key = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"
    mweb_version = "2.20230106.01.00"
    origin = "https://www.youtube.com"
