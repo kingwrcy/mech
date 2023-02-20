@@ -52,7 +52,7 @@ func (a Auth) Playback(nID int64) (*Playback, error) {
    b = strconv.AppendInt(b, nID, 10)
    var p playback_request
    p.Ad_Tags.Mode = "on-demand"
-   p.Ad_Tags.URL = "!"
+   p.Ad_Tags.URL = "-"
    body, err := json.MarshalIndent(p, "", " ")
    if err != nil {
       return nil, err
@@ -64,7 +64,7 @@ func (a Auth) Playback(nID int64) (*Playback, error) {
    req.Header = http.Header{
       "Authorization": {"Bearer " + a.Data.Access_Token},
       "Content-Type": {"application/json"},
-      "X-Amcn-Device-Ad-Id": {"!"},
+      "X-Amcn-Device-Ad-Id": {"-"},
       "X-Amcn-Language": {"en"},
       "X-Amcn-Network": {"amcplus"},
       "X-Amcn-Platform": {"web"},
@@ -122,7 +122,7 @@ func Unauth() (*Auth, error) {
       return nil, err
    }
    req.Header = http.Header{
-      "X-Amcn-Device-Id": {"!"},
+      "X-Amcn-Device-Id": {"-"},
       "X-Amcn-Language": {"en"},
       "X-Amcn-Network": {"amcplus"},
       "X-Amcn-Platform": {"web"},
@@ -158,8 +158,8 @@ func (a *Auth) Login(email, password string) error {
    req.Header = http.Header{
       "Authorization": {"Bearer " + a.Data.Access_Token},
       "Content-Type": {"application/json"},
-      "X-Amcn-Device-Ad-Id": {"!"},
-      "X-Amcn-Device-Id": {"!"},
+      "X-Amcn-Device-Ad-Id": {"-"},
+      "X-Amcn-Device-Id": {"-"},
       "X-Amcn-Language": {"en"},
       "X-Amcn-Network": {"amcplus"},
       "X-Amcn-Platform": {"web"},
