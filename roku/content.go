@@ -20,34 +20,9 @@ func (c Content) Name() string {
    }
    b.WriteString(c.Title)
    b.WriteByte('-')
-   b.WriteString(c.Year())
-   return b.String()
-}
-
-func (c Content) Year() string {
    year, _, _ := strings.Cut(c.Release_Date, "-")
-   return year
-}
-
-type Content struct {
-   Episode_Number string `json:"episodeNumber"`
-   Meta struct {
-      ID string
-      Media_Type string `json:"mediaType"`
-   }
-   Release_Date string `json:"releaseDate"` // 2007-01-01T000000Z
-   Run_Time_Seconds int64 `json:"runTimeSeconds"`
-   Season_Number string `json:"seasonNumber"`
-   Series struct {
-      Title string
-   }
-   Title string
-   View_Options []struct {
-      License string
-      Media struct {
-         Videos []Video
-      }
-   } `json:"viewOptions"`
+   b.WriteString(year)
+   return b.String()
 }
 
 func (c Content) String() string {
@@ -71,40 +46,6 @@ func (c Content) String() string {
    b.WriteString("\nDuration: ")
    b.WriteString(c.Duration().String())
    return b.String()
-}
-
-func New_Content(id string) (*Content, error) {
-   var ref url.URL
-   ref.Scheme = "https"
-   ref.Host = "content.sr.roku.com"
-   ref.Path = "/content/v1/roku-trc/" + id
-   ref.RawQuery = url.Values{
-      "expand": {"series"},
-      "include": {strings.Join([]string{
-         "episodeNumber",
-         "releaseDate",
-         "runTimeSeconds",
-         "seasonNumber",
-         // this needs to be exactly as is, otherwise size blows up
-         "series.seasons.episodes.viewOptions\u2008",
-         "series.title",
-         "title",
-         "viewOptions",
-      }, ",")},
-   }.Encode()
-   var buf strings.Builder
-   buf.WriteString("https://therokuchannel.roku.com/api/v2/homescreen/content/")
-   buf.WriteString(url.PathEscape(ref.String()))
-   res, err := Client.Get(buf.String())
-   if err != nil {
-      return nil, err
-   }
-   defer res.Body.Close()
-   con := new(Content)
-   if err := json.NewDecoder(res.Body).Decode(con); err != nil {
-      return nil, err
-   }
-   return con, nil
 }
 
 func (c Content) Duration() time.Duration {
@@ -132,5 +73,62 @@ func (c Content) HLS() (*Video, error) {
          }
       }
    }
-   return nil, errors.New("drmAuthentication")
+   return nil, errors.New("DRM authentication")
+}
+
+type Content struct {
+   Episode_Number string `json:"episodeNumber"`
+   Meta struct {
+      ID string
+      Media_Type string `json:"mediaType"`
+   }
+   Release_Date string `json:"releaseDate"` // 2007-01-01T000000Z
+   Run_Time_Seconds int64 `json:"runTimeSeconds"`
+   Season_Number string `json:"seasonNumber"`
+   Series struct {
+      Title string
+   }
+   Title string
+   View_Options []struct {
+      License string
+      Media struct {
+         Videos []Video
+      }
+   } `json:"viewOptions"`
+}
+
+func New_Content(id string) (*Content, error) {
+   include := []string{
+      "episodeNumber",
+      "releaseDate",
+      "runTimeSeconds",
+      "seasonNumber",
+      // this needs to be exactly as is, otherwise size blows up
+      "series.seasons.episodes.viewOptions\u2008",
+      "series.title",
+      "title",
+      "viewOptions",
+   }
+   var expand url.URL
+   expand.Scheme = "https"
+   expand.Host = "content.sr.roku.com"
+   expand.Path = "/content/v1/roku-trc/" + id
+   expand.RawQuery = url.Values{
+      "expand": {"series"},
+      "include": {strings.Join(include, ",")},
+   }.Encode()
+   var home strings.Builder
+   home.WriteString("https://therokuchannel.roku.com")
+   home.WriteString("/api/v2/homescreen/content/")
+   home.WriteString(url.PathEscape(expand.String()))
+   res, err := Client.Get(home.String())
+   if err != nil {
+      return nil, err
+   }
+   defer res.Body.Close()
+   screen := new(Content)
+   if err := json.NewDecoder(res.Body).Decode(screen); err != nil {
+      return nil, err
+   }
+   return screen, nil
 }
