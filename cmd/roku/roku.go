@@ -30,17 +30,3 @@ func (f flags) DASH(content *roku.Content) error {
    video := reps.Video()
    return f.DASH_Get(video, video.Bandwidth(f.bandwidth))
 }
-
-func (f flags) HLS(content *roku.Content) error {
-   video, err := content.HLS()
-   if err != nil {
-      return err
-   }
-   f.Name = content.Name()
-   master, err := f.Stream.HLS(video.URL)
-   if err != nil {
-      return err
-   }
-   streams := master.Streams
-   return f.HLS_Streams(streams, streams.Bandwidth(f.bandwidth))
-}

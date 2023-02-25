@@ -12,7 +12,6 @@ import (
 type flags struct {
    bandwidth int64
    codec string
-   dash bool
    id string
    mech.Stream
    verbose bool
@@ -29,8 +28,6 @@ func main() {
    // c
    f.Client_ID = filepath.Join(home, "mech/client_id.bin")
    flag.StringVar(&f.Client_ID, "c", f.Client_ID, "client ID")
-   // d
-   flag.BoolVar(&f.dash, "d", false, "DASH download")
    // f
    flag.Int64Var(&f.bandwidth, "f", 2621580, "video bandwidth")
    // g
@@ -52,16 +49,8 @@ func main() {
       if err != nil {
          panic(err)
       }
-      if f.dash {
-         err := f.DASH(content)
-         if err != nil {
-            panic(err)
-         }
-      } else {
-         err := f.HLS(content)
-         if err != nil {
-            panic(err)
-         }
+      if err := f.DASH(content); err != nil {
+         panic(err)
       }
    } else {
       flag.Usage()

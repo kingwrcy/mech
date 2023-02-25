@@ -4,7 +4,6 @@ import (
    "2a.pages.dev/rosso/http"
    "2a.pages.dev/rosso/json"
    "bytes"
-   "errors"
    "io"
    "net/url"
    "strings"
@@ -53,30 +52,6 @@ func (c Content) String() string {
 
 func (c Content) Duration() time.Duration {
    return time.Duration(c.Run_Time_Seconds) * time.Second
-}
-
-func (c Content) DASH() *Video {
-   for _, opt := range c.View_Options {
-      for _, vid := range opt.Media.Videos {
-         if vid.Video_Type == "DASH" {
-            return &vid
-         }
-      }
-   }
-   return nil
-}
-
-func (c Content) HLS() (*Video, error) {
-   for _, opt := range c.View_Options {
-      for _, vid := range opt.Media.Videos {
-         if vid.DRM_Authentication == nil {
-            if vid.Video_Type == "HLS" {
-               return &vid, nil
-            }
-         }
-      }
-   }
-   return nil, errors.New("DRM authentication")
 }
 
 type Content struct {
@@ -135,6 +110,7 @@ func New_Content(id string) (*Content, error) {
    }
    return screen, nil
 }
+
 type Video struct {
    DRM_Authentication *struct{} `json:"drmAuthentication"`
    URL string
@@ -230,4 +206,15 @@ func (c Cross_Site) Playback(id string) (*Playback, error) {
       return nil, err
    }
    return play, nil
+}
+
+func (c Content) DASH() *Video {
+   for _, opt := range c.View_Options {
+      for _, vid := range opt.Media.Videos {
+         if vid.Video_Type == "DASH" {
+            return &vid
+         }
+      }
+   }
+   return nil
 }
