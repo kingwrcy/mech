@@ -11,15 +11,6 @@ import (
    "strings"
 )
 
-func (c Container) String() string {
-   return hex.EncodeToString(c.Key)
-}
-
-type Container struct {
-   Key []byte
-   Type uint64
-}
-
 func New_Module(private_key, client_ID, key_ID []byte) (*Module, error) {
    block, _ := pem.Decode(private_key)
    var (
@@ -96,4 +87,13 @@ func (c Containers) Content() *Container {
       }
    }
    return nil
+}
+
+func (c Container) String() string {
+   return hex.EncodeToString(c.Key)
+}
+
+type Container struct {
+   Key []byte
+   Type uint64
 }

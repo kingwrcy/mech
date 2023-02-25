@@ -1,25 +1,83 @@
 package paramount
 
 import (
+   "2a.pages.dev/mech/widevine"
    "fmt"
+   "os"
    "testing"
    "time"
 )
 
-var tests = map[test_type]string{
-   // cbs.com/shows/video/YxlqOUdP1zZaIs7FGXCaS1dJi7gGzxG_
-   {episode, hls_clear}: "YxlqOUdP1zZaIs7FGXCaS1dJi7gGzxG_",
-   // paramountplus.com/movies/video/tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD
-   {movie, dash_cenc}: "tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD",
-   // paramountplus.com/shows/video/622520382
-   {episode, stream_pack}: "622520382",
-   // paramountplus.com/movies/video/wQH9yE_y_Dt4ekDYm3yelhhY2KXvOra_
-   {movie, stream_pack}: "wQH9yE_y_Dt4ekDYm3yelhhY2KXvOra_",
+type key struct {
+   asset int
+   content_type int
 }
 
-type test_type struct {
-   content_type int
-   asset int
+var tests = map[key]struct{
+   guid string
+   key string
+   key_ID string
+} {
+   // paramountplus.com/shows/video/rn1zyirVOPjCl8rxopWrhUmJEIs3GcKW
+   {dash_cenc, episode}: {
+      guid: "rn1zyirVOPjCl8rxopWrhUmJEIs3GcKW",
+      key: "",
+      key_ID: "",
+   },
+   // paramountplus.com/movies/video/tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD
+   {dash_cenc, movie}: {guid: "tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD"},
+   // cbs.com/shows/video/YxlqOUdP1zZaIs7FGXCaS1dJi7gGzxG_
+   {hls_clear, episode}: {guid: "YxlqOUdP1zZaIs7FGXCaS1dJi7gGzxG_"},
+   // paramountplus.com/shows/video/622520382
+   {stream_pack, episode}: {guid: "622520382"},
+   // paramountplus.com/movies/video/wQH9yE_y_Dt4ekDYm3yelhhY2KXvOra_
+   {stream_pack, movie}: {guid: "wQH9yE_y_Dt4ekDYm3yelhhY2KXvOra_"},
+}
+
+func Test_Preview(t *testing.T) {
+   for _, test := range tests {
+      preview, err := New_Preview(test.guid)
+      if err != nil {
+         t.Fatal(err)
+      }
+      fmt.Printf("%+v\n", preview)
+      time.Sleep(time.Second)
+   }
+}
+
+func Test_Post(t *testing.T) {
+   home, err := os.UserHomeDir()
+   if err != nil {
+      t.Fatal(err)
+   }
+   private_key, err := os.ReadFile(home + "/mech/private_key.pem")
+   if err != nil {
+      t.Fatal(err)
+   }
+   client_ID, err := os.ReadFile(home + "/mech/client_id.bin")
+   if err != nil {
+      t.Fatal(err)
+   }
+   test := tests[key{dash_cenc, episode}]
+   key_ID, err := widevine.Key_ID(test.key_ID)
+   if err != nil {
+      t.Fatal(err)
+   }
+   mod, err := widevine.New_Module(private_key, client_ID, key_ID)
+   if err != nil {
+      t.Fatal(err)
+   }
+   sess, err := New_Session(test.guid)
+   if err != nil {
+      t.Fatal(err)
+   }
+   keys, err := mod.Post(sess)
+   if err != nil {
+      t.Fatal(err)
+   }
+   if keys.Content().String() != test.key {
+      t.Fatal(keys)
+   }
 }
 
 const (
@@ -30,13 +88,3 @@ const (
    stream_pack
 )
 
-func Test_Preview(t *testing.T) {
-   for _, test := range tests {
-      preview, err := New_Preview(test)
-      if err != nil {
-         t.Fatal(err)
-      }
-      fmt.Printf("%+v\n", preview)
-      time.Sleep(time.Second)
-   }
-}

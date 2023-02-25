@@ -17,9 +17,11 @@ var tests = []struct {
       // therokuchannel.roku.com/watch/105c41ea75775968b670fbb26978ed76
       playback_ID: "105c41ea75775968b670fbb26978ed76",
    }, {
+      // movie
       // therokuchannel.roku.com/watch/2b3166271d83569c81d41030e9ba7fb0
       playback_ID: "2b3166271d83569c81d41030e9ba7fb0",
    }, {
+      // movie
       // therokuchannel.roku.com/watch/597a64a4a25c5bf6af4a8c7053049a6f
       key: "13d7c7cf295444944b627ef0ad2c1b3c",
       playback_ID: "597a64a4a25c5bf6af4a8c7053049a6f",
