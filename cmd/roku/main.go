@@ -3,6 +3,7 @@ package main
 import (
    "2a.pages.dev/mech"
    "2a.pages.dev/mech/roku"
+   "2a.pages.dev/mech/widevine"
    "flag"
    "os"
    "path/filepath"
@@ -14,6 +15,7 @@ type flags struct {
    dash bool
    id string
    mech.Stream
+   verbose bool
 }
 
 func main() {
@@ -38,7 +40,13 @@ func main() {
    // k
    f.Private_Key = filepath.Join(home, "mech/private_key.pem")
    flag.StringVar(&f.Private_Key, "k", f.Private_Key, "private key")
+   // v
+   flag.BoolVar(&f.verbose, "v", false, "verbose")
    flag.Parse()
+   if f.verbose {
+      roku.Client.Log_Level = 2
+      widevine.Client.Log_Level = 2
+   }
    if f.id != "" {
       content, err := roku.New_Content(f.id)
       if err != nil {

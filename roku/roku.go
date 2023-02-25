@@ -7,42 +7,12 @@ import (
    "io"
 )
 
-type Playback struct {
-   DRM struct {
-      Widevine struct {
-         License_Server string `json:"licenseServer"`
-      }
-   }
-}
-
-func (p Playback) Request_URL() string {
-   return p.DRM.Widevine.License_Server
-}
-
-func (Playback) Request_Header() http.Header {
-   return nil
-}
-
-func (Playback) Request_Body(buf []byte) ([]byte, error) {
-   return buf, nil
-}
-
-func (Playback) Response_Body(buf []byte) ([]byte, error) {
-   return buf, nil
-}
-
-var Client = http.Default_Client
-
-type Cross_Site struct {
-   cookie *http.Cookie // has own String method
-   token string
-}
-
 func (c Cross_Site) Playback(id string) (*Playback, error) {
-   buf, err := json.Marshal(map[string]string{
+   buf, err := json.MarshalIndent(map[string]string{
       "mediaFormat": "mpeg-dash",
+      "providerId": "rokuavod",
       "rokuId": id,
-   })
+   }, "", " ")
    if err != nil {
       return nil, err
    }
@@ -101,4 +71,34 @@ func New_Cross_Site() (*Cross_Site, error) {
       return nil, err
    }
    return &site, nil
+}
+type Playback struct {
+   DRM struct {
+      Widevine struct {
+         License_Server string `json:"licenseServer"`
+      }
+   }
+}
+
+func (p Playback) Request_URL() string {
+   return p.DRM.Widevine.License_Server
+}
+
+func (Playback) Request_Header() http.Header {
+   return nil
+}
+
+func (Playback) Request_Body(buf []byte) ([]byte, error) {
+   return buf, nil
+}
+
+func (Playback) Response_Body(buf []byte) ([]byte, error) {
+   return buf, nil
+}
+
+var Client = http.Default_Client
+
+type Cross_Site struct {
+   cookie *http.Cookie // has own String method
+   token string
 }
