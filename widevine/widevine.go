@@ -11,6 +11,20 @@ import (
    "strings"
 )
 
+func (c Containers) Content() *Container {
+   for _, container := range c {
+      if container.Type == 2 {
+         return &container
+      }
+   }
+   return nil
+}
+
+type Container struct {
+   Key []byte
+   Type uint64
+}
+
 func New_Module(private_key, client_ID, key_ID []byte) (*Module, error) {
    block, _ := pem.Decode(private_key)
    var (
@@ -80,20 +94,7 @@ var Client = http.Default_Client
 
 type Containers []Container
 
-func (c Containers) Content() *Container {
-   for _, container := range c {
-      if container.Type == 2 {
-         return &container
-      }
-   }
-   return nil
-}
-
 func (c Container) String() string {
    return hex.EncodeToString(c.Key)
 }
 
-type Container struct {
-   Key []byte
-   Type uint64
-}

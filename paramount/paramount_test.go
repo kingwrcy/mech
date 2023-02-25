@@ -8,6 +8,14 @@ import (
    "time"
 )
 
+const (
+   dash_cenc = iota
+   episode
+   hls_clear
+   movie
+   stream_pack
+)
+
 type key struct {
    asset int
    content_type int
@@ -21,8 +29,8 @@ var tests = map[key]struct{
    // paramountplus.com/shows/video/rn1zyirVOPjCl8rxopWrhUmJEIs3GcKW
    {dash_cenc, episode}: {
       guid: "rn1zyirVOPjCl8rxopWrhUmJEIs3GcKW",
-      key: "",
-      key_ID: "",
+      key: "f335e480e47739dbcaae7b48faffc002",
+      key_ID: "0f782a6bd2f2466eb9533376ca20ff5f",
    },
    // paramountplus.com/movies/video/tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD
    {dash_cenc, movie}: {guid: "tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD"},
@@ -79,12 +87,3 @@ func Test_Post(t *testing.T) {
       t.Fatal(keys)
    }
 }
-
-const (
-   dash_cenc = iota
-   episode
-   hls_clear
-   movie
-   stream_pack
-)
-
