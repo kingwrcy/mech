@@ -42,7 +42,7 @@ func main() {
    flag.Parse()
    if f.verbose {
       roku.Client.Log_Level = 2
-      widevine.Client.Log_Level = 2
+      widevine.Client.Log_Level = 3
    }
    if f.id != "" {
       content, err := roku.New_Content(f.id)
