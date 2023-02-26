@@ -2,11 +2,11 @@ package widevine
 
 import (
    "2a.pages.dev/mech/roku"
+   "2a.pages.dev/rosso/http"
    "bytes"
    "encoding/base64"
    "encoding/hex"
    "io"
-   "net/http"
    "os"
    "testing"
    "time"
@@ -17,6 +17,8 @@ const (
    movie
 )
 
+var client = http.Default_Client
+
 type key struct {
    media_type int
    status int
@@ -24,8 +26,8 @@ type key struct {
 
 var tests = map[key]struct {
    key string
-   playback_ID string
    init_data string
+   playback_ID string
 } {
    // therokuchannel.roku.com/watch/105c41ea75775968b670fbb26978ed76
    {episode, 500}: {
@@ -56,9 +58,6 @@ func Test_Post(t *testing.T) {
    }
    for _, test := range tests {
       init_data, err := base64.StdEncoding.DecodeString(test.init_data)
-      if err != nil {
-         t.Fatal(err)
-      }
       mod, err := New_Module(private_key, client_ID, init_data)
       if err != nil {
          t.Fatal(err)
@@ -81,7 +80,7 @@ func Test_Post(t *testing.T) {
       if err != nil {
          t.Fatal(err)
       }
-      res, err := new(http.Transport).RoundTrip(req)
+      res, err := client.Do(req)
       if err != nil {
          t.Fatal(err)
       }

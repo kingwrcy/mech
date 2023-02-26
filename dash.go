@@ -5,38 +5,13 @@ import (
    "2a.pages.dev/rosso/dash"
    "2a.pages.dev/rosso/http"
    "2a.pages.dev/rosso/mp4"
+   "encoding/base64"
    "encoding/xml"
    "fmt"
    "io"
    "net/url"
    "os"
 )
-
-var client = http.Default_Client
-
-type Stream struct {
-   Client_ID string
-   Info bool
-   Private_Key string
-   Poster widevine.Poster
-   Name string
-   base *url.URL
-}
-
-func (s *Stream) DASH(ref string) (dash.Representations, error) {
-   res, err := client.Redirect(nil).Get(ref)
-   if err != nil {
-      return nil, err
-   }
-   defer res.Body.Close()
-   var pres dash.Presentation
-   if err := xml.NewDecoder(res.Body).Decode(&pres); err != nil {
-      return nil, err
-   }
-   s.Name = Clean(s.Name)
-   s.base = res.Request.URL
-   return pres.Representation(), nil
-}
 
 func (s Stream) DASH_Get(items dash.Representations, index int) error {
    if s.Info {
@@ -77,11 +52,11 @@ func (s Stream) DASH_Get(items dash.Representations, index int) error {
       if err != nil {
          return err
       }
-      key_ID, err := widevine.Key_ID(item.Content_Protection.Default_KID)
+      pssh, err := base64.StdEncoding.DecodeString(item.Widevine().PSSH)
       if err != nil {
          return err
       }
-      mod, err := widevine.New_Module(private_key, client_ID, key_ID)
+      mod, err := widevine.New_Module(private_key, client_ID, pssh)
       if err != nil {
          return err
       }
@@ -123,4 +98,29 @@ func (s Stream) DASH_Get(items dash.Representations, index int) error {
       }
    }
    return nil
+}
+var client = http.Default_Client
+
+type Stream struct {
+   Client_ID string
+   Info bool
+   Private_Key string
+   Poster widevine.Poster
+   Name string
+   base *url.URL
+}
+
+func (s *Stream) DASH(ref string) (dash.Representations, error) {
+   res, err := client.Redirect(nil).Get(ref)
+   if err != nil {
+      return nil, err
+   }
+   defer res.Body.Close()
+   var pres dash.Presentation
+   if err := xml.NewDecoder(res.Body).Decode(&pres); err != nil {
+      return nil, err
+   }
+   s.Name = Clean(s.Name)
+   s.base = res.Request.URL
+   return pres.Representation(), nil
 }

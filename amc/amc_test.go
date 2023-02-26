@@ -9,8 +9,9 @@ import (
 )
 
 var links = []string{
+   // amcplus.com/movies/jerry-maguire--1054053
    "/movies/jerry-maguire--1054053",
-   "/shows/almost-royal/episodes/season-1-los-angeles--1010696",
+   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
    "/shows/orphan-black/episodes/season-1-instinct--1011152",
 }
 

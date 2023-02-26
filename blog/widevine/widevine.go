@@ -12,38 +12,8 @@ import (
    "google.golang.org/protobuf/proto"
 )
 
-type no_operation struct{}
-
-func (no_operation) Read(buf []byte) (int, error) {
-   return len(buf), nil
-}
-
-func unpad(b []byte) []byte {
-   if len(b) == 0 {
-      return b
-   }
-   // pks padding is designed so that the value of all the padding bytes is
-   // the number of padding bytes repeated so to figure out how many
-   // padding bytes there are we can just look at the value of the last
-   // byte
-   // i.e if there are 6 padding bytes then it will look at like
-   // <data> 0x6 0x6 0x6 0x6 0x6 0x6
-   count := int(b[len(b)-1])
-   return b[0 : len(b)-count]
-}
-
-type Container struct {
-   Type  License_KeyContainer_KeyType
-   Value []byte
-}
-
-type Module struct {
-   client_ID   []byte
-   privateKey *rsa.PrivateKey
-   widevineCencHeader      WidevineCencHeader
-}
-
 // Creates a new Module object with the specified device information.
+//func New_Module(privateKey, client_ID, init_data []byte) (*Module, error) {
 func New_Module(privateKey, client_ID, init_data []byte) (*Module, error) {
    block, _ := pem.Decode(privateKey)
    var (
@@ -54,10 +24,10 @@ func New_Module(privateKey, client_ID, init_data []byte) (*Module, error) {
    if err != nil {
       return nil, err
    }
-   if err := proto.Unmarshal(init_data[32:], &mod.widevineCencHeader); err != nil {
+   mod.client_ID = client_ID
+   if err := proto.Unmarshal(init_data[32:], &mod.cenc_header); err != nil {
       return nil, err
    }
-   mod.client_ID = client_ID
    return &mod, nil
 }
 
@@ -69,7 +39,12 @@ func (m *Module) signed_request() ([]byte, error) {
    license_req.Msg.ClientId = new(ClientIdentification)
    license_req.Msg.ContentId = new(LicenseRequest_ContentIdentification)
    license_req.Msg.ContentId.CencId = new(LicenseRequest_ContentIdentification_CENC)
-   license_req.Msg.ContentId.CencId.Pssh = &m.widevineCencHeader
+   license_req.Msg.ContentId.CencId.Pssh = new(WidevineCencHeader)
+   license_req.Msg.ContentId.CencId.Pssh.KeyId = m.cenc_header.KeyId
+
+   // THIS MOTHER FUCKER
+   license_req.Msg.ContentId.CencId.Pssh.ContentId = m.cenc_header.ContentId
+
    err := proto.Unmarshal(m.client_ID, license_req.Msg.ClientId)
    if err != nil {
       return nil, err
@@ -90,6 +65,13 @@ func (m *Module) signed_request() ([]byte, error) {
       return nil, err
    }
    return proto.Marshal(&license_req)
+}
+
+type Module struct {
+   client_ID []byte
+   key_ID []byte
+   privateKey *rsa.PrivateKey
+   cenc_header WidevineCencHeader
 }
 
 // Retrieves the keys from the license response data. These keys can be used to
@@ -136,4 +118,28 @@ func (m *Module) GetLicenseKeys(license_req []byte, license_res []byte) ([]Conta
       })
    }
    return keys, nil
+}
+type no_operation struct{}
+
+func (no_operation) Read(buf []byte) (int, error) {
+   return len(buf), nil
+}
+
+func unpad(b []byte) []byte {
+   if len(b) == 0 {
+      return b
+   }
+   // pks padding is designed so that the value of all the padding bytes is
+   // the number of padding bytes repeated so to figure out how many
+   // padding bytes there are we can just look at the value of the last
+   // byte
+   // i.e if there are 6 padding bytes then it will look at like
+   // <data> 0x6 0x6 0x6 0x6 0x6 0x6
+   count := int(b[len(b)-1])
+   return b[0 : len(b)-count]
+}
+
+type Container struct {
+   Type  License_KeyContainer_KeyType
+   Value []byte
 }
