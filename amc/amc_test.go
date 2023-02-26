@@ -2,47 +2,11 @@ package amc
 
 import (
    "2a.pages.dev/mech/widevine"
+   "encoding/base64"
    "fmt"
    "os"
    "testing"
    "time"
-)
-
-var links = []string{
-   // amcplus.com/movies/jerry-maguire--1054053
-   "/movies/jerry-maguire--1054053",
-   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
-   "/shows/orphan-black/episodes/season-1-instinct--1011152",
-}
-
-func Test_Content(t *testing.T) {
-   home, err := os.UserHomeDir()
-   if err != nil {
-      t.Fatal(err)
-   }
-   auth, err := Open_Auth(home + "/mech/amc.json")
-   if err != nil {
-      t.Fatal(err)
-   }
-   for _, link := range links {
-      con, err := auth.Content(link)
-      if err != nil {
-         t.Fatal(err)
-      }
-      video, err := con.Video_Player()
-      if err != nil {
-         t.Fatal(err)
-      }
-      fmt.Println(video.Name())
-      time.Sleep(time.Second)
-   }
-}
-
-// amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
-const (
-   key = "a66a5603545ad206c1a78e160a6710b1"
-   nID = 1011152
-   raw_key_ID = "c0e598b247fa443590299d5ef47da32c"
 )
 
 func Test_Post(t *testing.T) {
@@ -85,3 +49,40 @@ func Test_Post(t *testing.T) {
       t.Fatal(keys)
    }
 }
+var links = []string{
+   // amcplus.com/movies/jerry-maguire--1054053
+   "/movies/jerry-maguire--1054053",
+   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
+   "/shows/orphan-black/episodes/season-1-instinct--1011152",
+}
+
+func Test_Content(t *testing.T) {
+   home, err := os.UserHomeDir()
+   if err != nil {
+      t.Fatal(err)
+   }
+   auth, err := Open_Auth(home + "/mech/amc.json")
+   if err != nil {
+      t.Fatal(err)
+   }
+   for _, link := range links {
+      con, err := auth.Content(link)
+      if err != nil {
+         t.Fatal(err)
+      }
+      video, err := con.Video_Player()
+      if err != nil {
+         t.Fatal(err)
+      }
+      fmt.Println(video.Name())
+      time.Sleep(time.Second)
+   }
+}
+
+// amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
+const (
+   key = "a66a5603545ad206c1a78e160a6710b1"
+   nID = 1011152
+   raw_key_ID = "c0e598b247fa443590299d5ef47da32c"
+)
+

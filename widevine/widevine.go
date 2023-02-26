@@ -185,26 +185,11 @@ func New_Module(private_key, client_ID, pssh []byte) (*Module, error) {
    if err != nil {
       return nil, err
    }
-   cenc_header, err := protobuf.Unmarshal(pssh[32:])
-   if err != nil {
-      return nil, err
-   }
-   key_id, err := cenc_header.Get_Bytes(2)
-   if err != nil {
-      return nil, err
-   }
-   content_id, err := cenc_header.Get_Bytes(4)
-   if err != nil {
-      return nil, err
-   }
    mod.license_request = protobuf.Message{
       1: protobuf.Bytes(client_ID),
       2: protobuf.Message{ // ContentId
          1: protobuf.Message{ // CencId
-            1: protobuf.Message{ // Pssh
-               2: protobuf.Bytes(key_id),
-               4: protobuf.Bytes(content_id),
-            },
+            1: protobuf.Bytes(pssh[32:]),
          },
       },
    }.Marshal()
