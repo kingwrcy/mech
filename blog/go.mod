@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	2a.pages.dev/mech v1.1.3
-	github.com/aead/cmac v0.0.0-20160719120800-7af84192f0b1
+	github.com/chmike/cmac-go v1.1.0
 	google.golang.org/protobuf v1.28.1
 )
 

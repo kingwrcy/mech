@@ -8,9 +8,15 @@ import (
    "crypto/sha1"
    "crypto/x509"
    "encoding/pem"
-   "github.com/aead/cmac"
+   "github.com/chmike/cmac-go"
    "google.golang.org/protobuf/proto"
 )
+
+type no_operation struct{}
+
+func (no_operation) Read(buf []byte) (int, error) {
+   return len(buf), nil
+}
 
 func unpad(b []byte) []byte {
    if len(b) == 0 {
@@ -112,34 +118,22 @@ func (m *Module) GetLicenseKeys(license_req []byte, license_res []byte) ([]Conta
    enc_key = append(enc_key, request_msg...)
    enc_key = append(enc_key, []byte{0, 0, 0, 0x80}...)
    // CMAC
-   key_block, err := aes.NewCipher(session_key)
+   key_CMAC, err := cmac.New(aes.NewCipher, session_key)
    if err != nil {
       return nil, err
    }
-   key_CMAC, err := cmac.Sum(enc_key, key_block, key_block.BlockSize())
-   if err != nil {
-      return nil, err
-   }
-   key_cipher, err := aes.NewCipher(key_CMAC)
+   key_CMAC.Write(enc_key)
+   key_cipher, err := aes.NewCipher(key_CMAC.Sum(nil))
    if err != nil {
       return nil, err
    }
    var keys []Container
    for _, key := range signed_response.Msg.Key {
-      // FIXME
-      decrypter := cipher.NewCBCDecrypter(key_cipher, key.Iv)
-      decryptedKey := make([]byte, len(key.Key))
-      decrypter.CryptBlocks(decryptedKey, key.Key)
+      cipher.NewCBCDecrypter(key_cipher, key.Iv).CryptBlocks(key.Key, key.Key)
       keys = append(keys, Container{
          Type:  *key.Type,
-         Value: unpad(decryptedKey),
+         Value: unpad(key.Key),
       })
    }
    return keys, nil
-}
-
-type no_operation struct{}
-
-func (no_operation) Read(buf []byte) (int, error) {
-   return len(buf), nil
 }

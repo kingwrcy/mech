@@ -171,22 +171,22 @@ func (m Module) signed_response(response []byte) (Containers, error) {
    var keys Containers
    // .Msg.Key
    for _, message := range signed_response.Get(2).Get_Messages(3) {
-      var con Container
+      var key Container
       iv, err := message.Get_Bytes(2)
       if err != nil {
          return nil, err
       }
-      con.Key, err = message.Get_Bytes(3)
+      key.Key, err = message.Get_Bytes(3)
       if err != nil {
          return nil, err
       }
-      con.Type, err = message.Get_Varint(4)
+      key.Type, err = message.Get_Varint(4)
       if err != nil {
          return nil, err
       }
-      cipher.NewCBCDecrypter(key_cipher, iv).CryptBlocks(con.Key, con.Key)
-      con.Key = unpad(con.Key)
-      keys = append(keys, con)
+      cipher.NewCBCDecrypter(key_cipher, iv).CryptBlocks(key.Key, key.Key)
+      key.Key = unpad(key.Key)
+      keys = append(keys, key)
    }
    return keys, nil
 }
