@@ -11,18 +11,18 @@ import (
 )
 
 // this accepts full URL or path only
-func (a Auth) Content(raw_address string) (*Content, error) {
-   address, err := url.Parse(raw_address)
+func (a Auth) Content(raw_ref string) (*Content, error) {
+   ref, err := url.Parse(raw_ref)
    if err != nil {
       return nil, err
    }
    var b strings.Builder
    b.WriteString("https://gw.cds.amcn.com")
    b.WriteString("/content-compiler-cr/api/v1/content/amcn/amcplus/path")
-   if strings.HasPrefix(address.Path, "/movies/") {
+   if strings.HasPrefix(ref.Path, "/movies/") {
       b.WriteString("/watch")
    }
-   b.WriteString(address.Path)
+   b.WriteString(ref.Path)
    req, err := http.NewRequest("GET", b.String(), nil)
    if err != nil {
       return nil, err

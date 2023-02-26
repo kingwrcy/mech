@@ -49,12 +49,6 @@ func Test_Post(t *testing.T) {
       t.Fatal(keys)
    }
 }
-var links = []string{
-   // amcplus.com/movies/jerry-maguire--1054053
-   "/movies/jerry-maguire--1054053",
-   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
-   "/shows/orphan-black/episodes/season-1-instinct--1011152",
-}
 
 func Test_Content(t *testing.T) {
    home, err := os.UserHomeDir()
@@ -79,10 +73,16 @@ func Test_Content(t *testing.T) {
    }
 }
 
+var links = []string{
+   // amcplus.com/movies/jerry-maguire--1054053
+   "/movies/jerry-maguire--1054053",
+   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
+   "/shows/orphan-black/episodes/season-1-instinct--1011152",
+}
+
 // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
 const (
    key = "a66a5603545ad206c1a78e160a6710b1"
    nID = 1011152
    raw_key_ID = "c0e598b247fa443590299d5ef47da32c"
 )
-

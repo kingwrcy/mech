@@ -16,6 +16,28 @@ import (
    "io"
 )
 
+// some videos require key_id and content_id, so entire PSSH is needed
+func New_Module(private_key, client_ID, pssh []byte) (*Module, error) {
+   block, _ := pem.Decode(private_key)
+   var (
+      err error
+      mod Module
+   )
+   mod.private_key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+   if err != nil {
+      return nil, err
+   }
+   mod.license_request = protobuf.Message{
+      1: protobuf.Bytes(client_ID),
+      2: protobuf.Message{ // ContentId
+         1: protobuf.Message{ // CencId
+            1: protobuf.Bytes(pssh[32:]),
+         },
+      },
+   }.Marshal()
+   return &mod, nil
+}
+
 var Client = http.Default_Client
 
 func unpad(buf []byte) []byte {
@@ -173,25 +195,4 @@ type no_operation struct{}
 
 func (no_operation) Read(buf []byte) (int, error) {
    return len(buf), nil
-}
-
-func New_Module(private_key, client_ID, pssh []byte) (*Module, error) {
-   block, _ := pem.Decode(private_key)
-   var (
-      err error
-      mod Module
-   )
-   mod.private_key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-   if err != nil {
-      return nil, err
-   }
-   mod.license_request = protobuf.Message{
-      1: protobuf.Bytes(client_ID),
-      2: protobuf.Message{ // ContentId
-         1: protobuf.Message{ // CencId
-            1: protobuf.Bytes(pssh[32:]),
-         },
-      },
-   }.Marshal()
-   return &mod, nil
 }
