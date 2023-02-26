@@ -12,7 +12,6 @@ import (
 	"errors"
 	"math"
 	"time"
-
 	"github.com/aead/cmac"
 	"google.golang.org/protobuf/proto"
 	"lukechampine.com/frand"
@@ -80,11 +79,6 @@ func NewCDM(privateKey, clientID, initData []byte) (CDM, error) {
 
 		sessionID: sessionID,
 	}, nil
-}
-
-// Creates a new CDM object using the default device configuration.
-func NewDefaultCDM(initData []byte) (CDM, error) {
-	return NewCDM(DefaultPrivateKey, DefaultClientID, initData)
 }
 
 // Sets a device certificate.  This is makes generating the license request

@@ -20,7 +20,7 @@ type key struct {
 var tests = map[key]struct {
    key string
    playback_ID string
-   raw_key_ID string
+   key_ID string
 } {
    // therokuchannel.roku.com/watch/12cdc6139bb858f4a597a1aa51a1e37d
    {episode, 200}: {playback_ID: "12cdc6139bb858f4a597a1aa51a1e37d"},
@@ -30,7 +30,7 @@ var tests = map[key]struct {
    {movie, 200}: {
       key: "13d7c7cf295444944b627ef0ad2c1b3c",
       playback_ID: "597a64a4a25c5bf6af4a8c7053049a6f",
-      raw_key_ID: "28339AD78F734520DA24E6E0573D392E",
+      key_ID: "28339AD78F734520DA24E6E0573D392E",
    },
    // therokuchannel.roku.com/watch/2b3166271d83569c81d41030e9ba7fb0
    {movie, 500}: {playback_ID: "2b3166271d83569c81d41030e9ba7fb0"},
@@ -75,7 +75,7 @@ func Test_Post(t *testing.T) {
    }
    for _, test := range tests {
       if test.key != "" {
-         key_ID, err := widevine.Key_ID(test.raw_key_ID)
+         key_ID, err := widevine.Key_ID(test.key_ID)
          if err != nil {
             t.Fatal(err)
          }
