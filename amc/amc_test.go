@@ -9,6 +9,49 @@ import (
    "time"
 )
 
+const (
+   episode = iota
+   movie
+)
+
+var tests = map[int]struct {
+   address string
+   key string
+   pssh string
+} {
+   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
+   episode: {
+      address: "/shows/orphan-black/episodes/season-1-instinct--1011152",
+      key: "a66a5603545ad206c1a78e160a6710b1",
+      pssh: "AAAAVnBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADYIARIQJqlCz6NjSI2kDWew20wbGRoNd2lkZXZpbmVfdGVzdCIIMTIzNDU2NzgyB2RlZmF1bHQ=",
+   },
+   // amcplus.com/movies/jerry-maguire--1054053
+   movie: {address: "/movies/jerry-maguire--1054053"},
+}
+
+func Test_Content(t *testing.T) {
+   home, err := os.UserHomeDir()
+   if err != nil {
+      t.Fatal(err)
+   }
+   auth, err := Open_Auth(home + "/mech/amc.json")
+   if err != nil {
+      t.Fatal(err)
+   }
+   for _, test := range tests {
+      con, err := auth.Content(test.address)
+      if err != nil {
+         t.Fatal(err)
+      }
+      video, err := con.Video_Player()
+      if err != nil {
+         t.Fatal(err)
+      }
+      fmt.Println(video.Name())
+      time.Sleep(time.Second)
+   }
+}
+
 func Test_Post(t *testing.T) {
    home, err := os.UserHomeDir()
    if err != nil {
@@ -22,11 +65,12 @@ func Test_Post(t *testing.T) {
    if err != nil {
       t.Fatal(err)
    }
-   key_ID, err := widevine.Key_ID(raw_key_ID)
+   test := tests[episode]
+   pssh, err := base64.StdEncoding.DecodeString(test.pssh)
    if err != nil {
       t.Fatal(err)
    }
-   mod, err := widevine.New_Module(private_key, client_ID, key_ID)
+   mod, err := widevine.New_Module(private_key, client_ID, pssh)
    if err != nil {
       t.Fatal(err)
    }
@@ -37,7 +81,7 @@ func Test_Post(t *testing.T) {
    if err := auth.Refresh(); err != nil {
       t.Fatal(err)
    }
-   play, err := auth.Playback(nID)
+   play, err := auth.Playback(test.address)
    if err != nil {
       t.Fatal(err)
    }
@@ -45,44 +89,7 @@ func Test_Post(t *testing.T) {
    if err != nil {
       t.Fatal(err)
    }
-   if keys.Content().String() != key {
-      t.Fatal(keys)
+   if keys.Content().String() != test.key {
+      t.Fatalf("%+v", keys)
    }
 }
-
-func Test_Content(t *testing.T) {
-   home, err := os.UserHomeDir()
-   if err != nil {
-      t.Fatal(err)
-   }
-   auth, err := Open_Auth(home + "/mech/amc.json")
-   if err != nil {
-      t.Fatal(err)
-   }
-   for _, link := range links {
-      con, err := auth.Content(link)
-      if err != nil {
-         t.Fatal(err)
-      }
-      video, err := con.Video_Player()
-      if err != nil {
-         t.Fatal(err)
-      }
-      fmt.Println(video.Name())
-      time.Sleep(time.Second)
-   }
-}
-
-var links = []string{
-   // amcplus.com/movies/jerry-maguire--1054053
-   "/movies/jerry-maguire--1054053",
-   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
-   "/shows/orphan-black/episodes/season-1-instinct--1011152",
-}
-
-// amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
-const (
-   key = "a66a5603545ad206c1a78e160a6710b1"
-   nID = 1011152
-   raw_key_ID = "c0e598b247fa443590299d5ef47da32c"
-)

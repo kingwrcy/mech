@@ -88,7 +88,6 @@ type Video_Player struct {
    Current_Video struct {
       Meta struct {
          Airdate string // 1996-01-01T00:00:00.000Z
-         NID int64
          Title string
       }
    } `json:"currentVideo"`

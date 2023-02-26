@@ -3,12 +3,55 @@ package amc
 import (
    "bytes"
    "encoding/json"
+   "fmt"
    "net/http"
    "net/url"
    "os"
-   "strconv"
    "strings"
 )
+
+func (a Auth) Playback(ref string) (*Playback, error) {
+   _, nID, found := strings.Cut(ref, "--")
+   if !found {
+      return nil, fmt.Errorf("%q invalid", ref)
+   }
+   var p playback_request
+   p.Ad_Tags.Mode = "on-demand"
+   p.Ad_Tags.URL = "-"
+   body, err := json.MarshalIndent(p, "", " ")
+   if err != nil {
+      return nil, err
+   }
+   req, err := http.NewRequest(
+      "POST", "https://gw.cds.amcn.com/playback-id/api/v1/playback/" + nID,
+      bytes.NewReader(body),
+   )
+   if err != nil {
+      return nil, err
+   }
+   req.Header = http.Header{
+      "Authorization": {"Bearer " + a.Data.Access_Token},
+      "Content-Type": {"application/json"},
+      "X-Amcn-Device-Ad-Id": {"-"},
+      "X-Amcn-Language": {"en"},
+      "X-Amcn-Network": {"amcplus"},
+      "X-Amcn-Platform": {"web"},
+      "X-Amcn-Service-Id": {"amcplus"},
+      "X-Amcn-Tenant": {"amcn"},
+      "X-Ccpa-Do-Not-Sell": {"doNotPassData"},
+   }
+   res, err := Client.Do(req)
+   if err != nil {
+      return nil, err
+   }
+   defer res.Body.Close()
+   var play Playback
+   if err := json.NewDecoder(res.Body).Decode(&play.body); err != nil {
+      return nil, err
+   }
+   play.head = res.Header
+   return &play, nil
+}
 
 // this accepts full URL or path only
 func (a Auth) Content(raw_ref string) (*Content, error) {
@@ -44,45 +87,6 @@ func (a Auth) Content(raw_ref string) (*Content, error) {
       return nil, err
    }
    return con, nil
-}
-
-func (a Auth) Playback(nID int64) (*Playback, error) {
-   var b []byte
-   b = append(b, "https://gw.cds.amcn.com/playback-id/api/v1/playback/"...)
-   b = strconv.AppendInt(b, nID, 10)
-   var p playback_request
-   p.Ad_Tags.Mode = "on-demand"
-   p.Ad_Tags.URL = "-"
-   body, err := json.MarshalIndent(p, "", " ")
-   if err != nil {
-      return nil, err
-   }
-   req, err := http.NewRequest("POST", string(b), bytes.NewReader(body))
-   if err != nil {
-      return nil, err
-   }
-   req.Header = http.Header{
-      "Authorization": {"Bearer " + a.Data.Access_Token},
-      "Content-Type": {"application/json"},
-      "X-Amcn-Device-Ad-Id": {"-"},
-      "X-Amcn-Language": {"en"},
-      "X-Amcn-Network": {"amcplus"},
-      "X-Amcn-Platform": {"web"},
-      "X-Amcn-Service-Id": {"amcplus"},
-      "X-Amcn-Tenant": {"amcn"},
-      "X-Ccpa-Do-Not-Sell": {"doNotPassData"},
-   }
-   res, err := Client.Do(req)
-   if err != nil {
-      return nil, err
-   }
-   defer res.Body.Close()
-   var play Playback
-   if err := json.NewDecoder(res.Body).Decode(&play.body); err != nil {
-      return nil, err
-   }
-   play.head = res.Header
-   return &play, nil
 }
 
 type Auth struct {
