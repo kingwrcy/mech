@@ -1,378 +1,281 @@
 package widevine
 
 import (
-	"bytes"
-	"crypto"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rsa"
-	"crypto/sha1"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/pem"
-	"encoding/xml"
-	"errors"
-	"github.com/aead/cmac"
-	"google.golang.org/protobuf/proto"
-	"io"
-	"lukechampine.com/frand"
-	"math"
-	"net/http"
-	"time"
+   "bytes"
+   "crypto"
+   "crypto/aes"
+   "crypto/cipher"
+   "crypto/rsa"
+   "crypto/sha1"
+   "crypto/x509"
+   "encoding/pem"
+   "errors"
+   "github.com/aead/cmac"
+   "google.golang.org/protobuf/proto"
+   "io"
+   "lukechampine.com/frand"
+   "math"
+   "net/http"
+   "time"
 )
-
-// This function retrieves the PSSH/Init Data from a given MPD file reader.
-// Example file: https://bitmovin-a.akamaihd.net/content/art-of-motion_drm/mpds/11331.mpd
-func InitDataFromMPD(r io.Reader) ([]byte, error) {
-	type mpd struct {
-		XMLName                   xml.Name `xml:"MPD"`
-		Text                      string   `xml:",chardata"`
-		ID                        string   `xml:"id,attr"`
-		Profiles                  string   `xml:"profiles,attr"`
-		Type                      string   `xml:"type,attr"`
-		AvailabilityStartTime     string   `xml:"availabilityStartTime,attr"`
-		PublishTime               string   `xml:"publishTime,attr"`
-		MediaPresentationDuration string   `xml:"mediaPresentationDuration,attr"`
-		MinBufferTime             string   `xml:"minBufferTime,attr"`
-		Version                   string   `xml:"version,attr"`
-		Ns2                       string   `xml:"ns2,attr"`
-		Xmlns                     string   `xml:"xmlns,attr"`
-		Bitmovin                  string   `xml:"bitmovin,attr"`
-		Period                    struct {
-			Text          string `xml:",chardata"`
-			AdaptationSet []struct {
-				Text            string `xml:",chardata"`
-				MimeType        string `xml:"mimeType,attr"`
-				Codecs          string `xml:"codecs,attr"`
-				Lang            string `xml:"lang,attr"`
-				Label           string `xml:"label,attr"`
-				SegmentTemplate struct {
-					Text           string `xml:",chardata"`
-					Media          string `xml:"media,attr"`
-					Initialization string `xml:"initialization,attr"`
-					Duration       string `xml:"duration,attr"`
-					StartNumber    string `xml:"startNumber,attr"`
-					Timescale      string `xml:"timescale,attr"`
-				} `xml:"SegmentTemplate"`
-				ContentProtection []struct {
-					Text        string `xml:",chardata"`
-					SchemeIdUri string `xml:"schemeIdUri,attr"`
-					Value       string `xml:"value,attr"`
-					DefaultKID  string `xml:"default_KID,attr"`
-					Pssh        string `xml:"pssh"`
-				} `xml:"ContentProtection"`
-				Representation []struct {
-					Text              string `xml:",chardata"`
-					ID                string `xml:"id,attr"`
-					Bandwidth         string `xml:"bandwidth,attr"`
-					Width             string `xml:"width,attr"`
-					Height            string `xml:"height,attr"`
-					FrameRate         string `xml:"frameRate,attr"`
-					AudioSamplingRate string `xml:"audioSamplingRate,attr"`
-					ContentProtection []struct {
-						Text        string `xml:",chardata"`
-						SchemeIdUri string `xml:"schemeIdUri,attr"`
-						Value       string `xml:"value,attr"`
-						DefaultKID  string `xml:"default_KID,attr"`
-						Cenc        string `xml:"cenc,attr"`
-						Pssh        struct {
-							Text string `xml:",chardata"`
-							Cenc string `xml:"cenc,attr"`
-						} `xml:"pssh"`
-					} `xml:"ContentProtection"`
-				} `xml:"Representation"`
-				AudioChannelConfiguration struct {
-					Text        string `xml:",chardata"`
-					SchemeIdUri string `xml:"schemeIdUri,attr"`
-					Value       string `xml:"value,attr"`
-				} `xml:"AudioChannelConfiguration"`
-			} `xml:"AdaptationSet"`
-		} `xml:"Period"`
-	}
-
-	var mpdPlaylist mpd
-	if err := xml.NewDecoder(r).Decode(&mpdPlaylist); err != nil {
-		return nil, err
-	}
-
-	const widevineSchemeIdURI = "urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed"
-	for _, adaptionSet := range mpdPlaylist.Period.AdaptationSet {
-		for _, protection := range adaptionSet.ContentProtection {
-			if protection.SchemeIdUri == widevineSchemeIdURI && len(protection.Pssh) > 0 {
-				return base64.StdEncoding.DecodeString(protection.Pssh)
-			}
-		}
-	}
-	for _, adaptionSet := range mpdPlaylist.Period.AdaptationSet {
-		for _, representation := range adaptionSet.Representation {
-			for _, protection := range representation.ContentProtection {
-				if protection.SchemeIdUri == widevineSchemeIdURI && len(protection.Pssh.Text) > 0 {
-					return base64.StdEncoding.DecodeString(protection.Pssh.Text)
-				}
-			}
-		}
-	}
-
-	return nil, errors.New("no init data found")
-}
 
 // This function retrieves certificate data from a given license server.
 func GetCertData(client *http.Client, licenseURL string) ([]byte, error) {
-	response, err := client.Post(licenseURL, "application/x-www-form-urlencoded", bytes.NewReader([]byte{0x08, 0x04}))
-	if err != nil {
-		return nil, err
-	}
-	defer response.Body.Close()
-	return io.ReadAll(response.Body)
+   response, err := client.Post(licenseURL, "application/x-www-form-urlencoded", bytes.NewReader([]byte{0x08, 0x04}))
+   if err != nil {
+      return nil, err
+   }
+   defer response.Body.Close()
+   return io.ReadAll(response.Body)
 }
 type CDM struct {
-	privateKey *rsa.PrivateKey
-	clientID   []byte
-	sessionID  [32]byte
+   privateKey *rsa.PrivateKey
+   clientID   []byte
+   sessionID  [32]byte
 
-	widevineCencHeader      WidevineCencHeader
-	signedDeviceCertificate SignedDeviceCertificate
-	privacyMode             bool
+   widevineCencHeader      WidevineCencHeader
+   signedDeviceCertificate SignedDeviceCertificate
+   privacyMode             bool
 }
 
 type Key struct {
-	ID    []byte
-	Type  License_KeyContainer_KeyType
-	Value []byte
+   ID    []byte
+   Type  License_KeyContainer_KeyType
+   Value []byte
 }
 
 // Creates a new CDM object with the specified device information.
 func NewCDM(privateKey, clientID, initData []byte) (CDM, error) {
-	block, _ := pem.Decode(privateKey)
-	if block == nil || (block.Type != "PRIVATE KEY" && block.Type != "RSA PRIVATE KEY") {
-		return CDM{}, errors.New("failed to decode device private key")
-	}
+   block, _ := pem.Decode(privateKey)
+   if block == nil || (block.Type != "PRIVATE KEY" && block.Type != "RSA PRIVATE KEY") {
+      return CDM{}, errors.New("failed to decode device private key")
+   }
 
-	keyParsed, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		// if PCKS1 doesn't work, try PCKS8
-		pcks8Key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return CDM{}, err
-		}
-		keyParsed = pcks8Key.(*rsa.PrivateKey)
-	}
+   keyParsed, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+   if err != nil {
+      // if PCKS1 doesn't work, try PCKS8
+      pcks8Key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+      if err != nil {
+         return CDM{}, err
+      }
+      keyParsed = pcks8Key.(*rsa.PrivateKey)
+   }
 
-	var widevineCencHeader WidevineCencHeader
-	if len(initData) < 32 {
-		return CDM{}, errors.New("initData not long enough")
-	}
-	if err := proto.Unmarshal(initData[32:], &widevineCencHeader); err != nil {
-		return CDM{}, err
-	}
+   var widevineCencHeader WidevineCencHeader
+   if len(initData) < 32 {
+      return CDM{}, errors.New("initData not long enough")
+   }
+   if err := proto.Unmarshal(initData[32:], &widevineCencHeader); err != nil {
+      return CDM{}, err
+   }
 
-	sessionID := func() (s [32]byte) {
-		c := []byte("ABCDEF0123456789")
-		for i := 0; i < 16; i++ {
-			s[i] = c[frand.Intn(len(c))]
-		}
-		s[16] = '0'
-		s[17] = '1'
-		for i := 18; i < 32; i++ {
-			s[i] = '0'
-		}
-		return s
-	}()
+   sessionID := func() (s [32]byte) {
+      c := []byte("ABCDEF0123456789")
+      for i := 0; i < 16; i++ {
+         s[i] = c[frand.Intn(len(c))]
+      }
+      s[16] = '0'
+      s[17] = '1'
+      for i := 18; i < 32; i++ {
+         s[i] = '0'
+      }
+      return s
+   }()
 
-	return CDM{
-		privateKey: keyParsed,
-		clientID:   clientID,
+   return CDM{
+      privateKey: keyParsed,
+      clientID:   clientID,
 
-		widevineCencHeader: widevineCencHeader,
+      widevineCencHeader: widevineCencHeader,
 
-		sessionID: sessionID,
-	}, nil
+      sessionID: sessionID,
+   }, nil
 }
 
 // Sets a device certificate.  This is makes generating the license request
 // more complicated but is supported.  This is usually not necessary for most
 // Widevine applications.
 func (c *CDM) SetServiceCertificate(certData []byte) error {
-	var message SignedMessage
-	if err := proto.Unmarshal(certData, &message); err != nil {
-		return err
-	}
-	if err := proto.Unmarshal(message.Msg, &c.signedDeviceCertificate); err != nil {
-		return err
-	}
-	c.privacyMode = true
-	return nil
+   var message SignedMessage
+   if err := proto.Unmarshal(certData, &message); err != nil {
+      return err
+   }
+   if err := proto.Unmarshal(message.Msg, &c.signedDeviceCertificate); err != nil {
+      return err
+   }
+   c.privacyMode = true
+   return nil
 }
 
 // Generates the license request data.  This is sent to the license server via
 // HTTP POST and the server in turn returns the license response.
 func (c *CDM) GetLicenseRequest() ([]byte, error) {
-	var licenseRequest SignedLicenseRequest
-	licenseRequest.Msg = new(LicenseRequest)
-	licenseRequest.Msg.ContentId = new(LicenseRequest_ContentIdentification)
-	licenseRequest.Msg.ContentId.CencId = new(LicenseRequest_ContentIdentification_CENC)
+   var licenseRequest SignedLicenseRequest
+   licenseRequest.Msg = new(LicenseRequest)
+   licenseRequest.Msg.ContentId = new(LicenseRequest_ContentIdentification)
+   licenseRequest.Msg.ContentId.CencId = new(LicenseRequest_ContentIdentification_CENC)
 
-	// this is probably really bad for the GC but protobuf uses pointers for optional
-	// fields so it is necessary and this is not a long running program
-	{
-		v := SignedLicenseRequest_LICENSE_REQUEST
-		licenseRequest.Type = &v
-	}
+   // this is probably really bad for the GC but protobuf uses pointers for optional
+   // fields so it is necessary and this is not a long running program
+   {
+      v := SignedLicenseRequest_LICENSE_REQUEST
+      licenseRequest.Type = &v
+   }
 
-	licenseRequest.Msg.ContentId.CencId.Pssh = &c.widevineCencHeader
+   licenseRequest.Msg.ContentId.CencId.Pssh = &c.widevineCencHeader
 
-	{
-		v := LicenseType_DEFAULT
-		licenseRequest.Msg.ContentId.CencId.LicenseType = &v
-	}
+   {
+      v := LicenseType_DEFAULT
+      licenseRequest.Msg.ContentId.CencId.LicenseType = &v
+   }
 
-	licenseRequest.Msg.ContentId.CencId.RequestId = c.sessionID[:]
+   licenseRequest.Msg.ContentId.CencId.RequestId = c.sessionID[:]
 
-	{
-		v := LicenseRequest_NEW
-		licenseRequest.Msg.Type = &v
-	}
+   {
+      v := LicenseRequest_NEW
+      licenseRequest.Msg.Type = &v
+   }
 
-	{
-		v := uint32(time.Now().Unix())
-		licenseRequest.Msg.RequestTime = &v
-	}
+   {
+      v := uint32(time.Now().Unix())
+      licenseRequest.Msg.RequestTime = &v
+   }
 
-	{
-		v := ProtocolVersion_CURRENT
-		licenseRequest.Msg.ProtocolVersion = &v
-	}
+   {
+      v := ProtocolVersion_CURRENT
+      licenseRequest.Msg.ProtocolVersion = &v
+   }
 
-	{
-		v := uint32(frand.Uint64n(math.MaxUint32))
-		licenseRequest.Msg.KeyControlNonce = &v
-	}
+   {
+      v := uint32(frand.Uint64n(math.MaxUint32))
+      licenseRequest.Msg.KeyControlNonce = &v
+   }
 
-	if c.privacyMode {
-		pad := func(data []byte, blockSize int) []byte {
-			padlen := blockSize - (len(data) % blockSize)
-			if padlen == 0 {
-				padlen = blockSize
-			}
-			return append(data, bytes.Repeat([]byte{byte(padlen)}, padlen)...)
-		}
-		const blockSize = 16
+   if c.privacyMode {
+      pad := func(data []byte, blockSize int) []byte {
+         padlen := blockSize - (len(data) % blockSize)
+         if padlen == 0 {
+            padlen = blockSize
+         }
+         return append(data, bytes.Repeat([]byte{byte(padlen)}, padlen)...)
+      }
+      const blockSize = 16
 
-		var cidKey, cidIV [blockSize]byte
-		frand.Read(cidKey[:])
-		frand.Read(cidIV[:])
+      var cidKey, cidIV [blockSize]byte
+      frand.Read(cidKey[:])
+      frand.Read(cidIV[:])
 
-		block, err := aes.NewCipher(cidKey[:])
-		if err != nil {
-			return nil, err
-		}
+      block, err := aes.NewCipher(cidKey[:])
+      if err != nil {
+         return nil, err
+      }
 
-		paddedClientID := pad(c.clientID, blockSize)
-		encryptedClientID := make([]byte, len(paddedClientID))
-		cipher.NewCBCEncrypter(block, cidIV[:]).CryptBlocks(encryptedClientID, paddedClientID)
+      paddedClientID := pad(c.clientID, blockSize)
+      encryptedClientID := make([]byte, len(paddedClientID))
+      cipher.NewCBCEncrypter(block, cidIV[:]).CryptBlocks(encryptedClientID, paddedClientID)
 
-		servicePublicKey, err := x509.ParsePKCS1PublicKey(c.signedDeviceCertificate.XDeviceCertificate.PublicKey)
-		if err != nil {
-			return nil, err
-		}
+      servicePublicKey, err := x509.ParsePKCS1PublicKey(c.signedDeviceCertificate.XDeviceCertificate.PublicKey)
+      if err != nil {
+         return nil, err
+      }
 
-		encryptedCIDKey, err := rsa.EncryptOAEP(sha1.New(), frand.Reader, servicePublicKey, cidKey[:], nil)
-		if err != nil {
-			return nil, err
-		}
+      encryptedCIDKey, err := rsa.EncryptOAEP(sha1.New(), frand.Reader, servicePublicKey, cidKey[:], nil)
+      if err != nil {
+         return nil, err
+      }
 
-		licenseRequest.Msg.EncryptedClientId = new(EncryptedClientIdentification)
-		{
-			v := string(c.signedDeviceCertificate.XDeviceCertificate.ServiceId)
-			licenseRequest.Msg.EncryptedClientId.ServiceId = &v
-		}
-		licenseRequest.Msg.EncryptedClientId.ServiceCertificateSerialNumber = c.signedDeviceCertificate.XDeviceCertificate.SerialNumber
-		licenseRequest.Msg.EncryptedClientId.EncryptedClientId = encryptedClientID
-		licenseRequest.Msg.EncryptedClientId.EncryptedClientIdIv = cidIV[:]
-		licenseRequest.Msg.EncryptedClientId.EncryptedPrivacyKey = encryptedCIDKey
-	} else {
-		licenseRequest.Msg.ClientId = new(ClientIdentification)
-		if err := proto.Unmarshal(c.clientID, licenseRequest.Msg.ClientId); err != nil {
-			return nil, err
-		}
-	}
+      licenseRequest.Msg.EncryptedClientId = new(EncryptedClientIdentification)
+      {
+         v := string(c.signedDeviceCertificate.XDeviceCertificate.ServiceId)
+         licenseRequest.Msg.EncryptedClientId.ServiceId = &v
+      }
+      licenseRequest.Msg.EncryptedClientId.ServiceCertificateSerialNumber = c.signedDeviceCertificate.XDeviceCertificate.SerialNumber
+      licenseRequest.Msg.EncryptedClientId.EncryptedClientId = encryptedClientID
+      licenseRequest.Msg.EncryptedClientId.EncryptedClientIdIv = cidIV[:]
+      licenseRequest.Msg.EncryptedClientId.EncryptedPrivacyKey = encryptedCIDKey
+   } else {
+      licenseRequest.Msg.ClientId = new(ClientIdentification)
+      if err := proto.Unmarshal(c.clientID, licenseRequest.Msg.ClientId); err != nil {
+         return nil, err
+      }
+   }
 
-	{
-		data, err := proto.Marshal(licenseRequest.Msg)
-		if err != nil {
-			return nil, err
-		}
-		hash := sha1.Sum(data)
-		if licenseRequest.Signature, err = rsa.SignPSS(frand.Reader, c.privateKey, crypto.SHA1, hash[:], &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}); err != nil {
-			return nil, err
-		}
-	}
+   {
+      data, err := proto.Marshal(licenseRequest.Msg)
+      if err != nil {
+         return nil, err
+      }
+      hash := sha1.Sum(data)
+      if licenseRequest.Signature, err = rsa.SignPSS(frand.Reader, c.privateKey, crypto.SHA1, hash[:], &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}); err != nil {
+         return nil, err
+      }
+   }
 
-	return proto.Marshal(&licenseRequest)
+   return proto.Marshal(&licenseRequest)
 }
 
 // Retrieves the keys from the license response data.  These keys can be
 // used to decrypt the DASH-MP4.
 func (c *CDM) GetLicenseKeys(licenseRequest []byte, licenseResponse []byte) (keys []Key, err error) {
-	var license SignedLicense
-	if err = proto.Unmarshal(licenseResponse, &license); err != nil {
-		return
-	}
+   var license SignedLicense
+   if err = proto.Unmarshal(licenseResponse, &license); err != nil {
+      return
+   }
 
-	var licenseRequestParsed SignedLicenseRequest
-	if err = proto.Unmarshal(licenseRequest, &licenseRequestParsed); err != nil {
-		return
-	}
-	licenseRequestMsg, err := proto.Marshal(licenseRequestParsed.Msg)
-	if err != nil {
-		return
-	}
+   var licenseRequestParsed SignedLicenseRequest
+   if err = proto.Unmarshal(licenseRequest, &licenseRequestParsed); err != nil {
+      return
+   }
+   licenseRequestMsg, err := proto.Marshal(licenseRequestParsed.Msg)
+   if err != nil {
+      return
+   }
 
-	sessionKey, err := rsa.DecryptOAEP(sha1.New(), frand.Reader, c.privateKey, license.SessionKey, nil)
-	if err != nil {
-		return
-	}
+   sessionKey, err := rsa.DecryptOAEP(sha1.New(), frand.Reader, c.privateKey, license.SessionKey, nil)
+   if err != nil {
+      return
+   }
 
-	sessionKeyBlock, err := aes.NewCipher(sessionKey)
-	if err != nil {
-		return
-	}
+   sessionKeyBlock, err := aes.NewCipher(sessionKey)
+   if err != nil {
+      return
+   }
 
-	encryptionKey := []byte{1, 'E', 'N', 'C', 'R', 'Y', 'P', 'T', 'I', 'O', 'N', 0}
-	encryptionKey = append(encryptionKey, licenseRequestMsg...)
-	encryptionKey = append(encryptionKey, []byte{0, 0, 0, 0x80}...)
-	encryptionKeyCmac, err := cmac.Sum(encryptionKey, sessionKeyBlock, sessionKeyBlock.BlockSize())
-	if err != nil {
-		return
-	}
-	encryptionKeyCipher, err := aes.NewCipher(encryptionKeyCmac)
-	if err != nil {
-		return
-	}
+   encryptionKey := []byte{1, 'E', 'N', 'C', 'R', 'Y', 'P', 'T', 'I', 'O', 'N', 0}
+   encryptionKey = append(encryptionKey, licenseRequestMsg...)
+   encryptionKey = append(encryptionKey, []byte{0, 0, 0, 0x80}...)
+   encryptionKeyCmac, err := cmac.Sum(encryptionKey, sessionKeyBlock, sessionKeyBlock.BlockSize())
+   if err != nil {
+      return
+   }
+   encryptionKeyCipher, err := aes.NewCipher(encryptionKeyCmac)
+   if err != nil {
+      return
+   }
 
-	unpad := func(b []byte) []byte {
-		if len(b) == 0 {
-			return b
-		}
-		// pks padding is designed so that the value of all the padding bytes is
-		// the number of padding bytes repeated so to figure out how many
-		// padding bytes there are we can just look at the value of the last
-		// byte
-		// i.e if there are 6 padding bytes then it will look at like
-		// <data> 0x6 0x6 0x6 0x6 0x6 0x6
-		count := int(b[len(b)-1])
-		return b[0 : len(b)-count]
-	}
-	for _, key := range license.Msg.Key {
-		decrypter := cipher.NewCBCDecrypter(encryptionKeyCipher, key.Iv)
-		decryptedKey := make([]byte, len(key.Key))
-		decrypter.CryptBlocks(decryptedKey, key.Key)
-		keys = append(keys, Key{
-			ID:    key.Id,
-			Type:  *key.Type,
-			Value: unpad(decryptedKey),
-		})
-	}
+   unpad := func(b []byte) []byte {
+      if len(b) == 0 {
+         return b
+      }
+      // pks padding is designed so that the value of all the padding bytes is
+      // the number of padding bytes repeated so to figure out how many
+      // padding bytes there are we can just look at the value of the last
+      // byte
+      // i.e if there are 6 padding bytes then it will look at like
+      // <data> 0x6 0x6 0x6 0x6 0x6 0x6
+      count := int(b[len(b)-1])
+      return b[0 : len(b)-count]
+   }
+   for _, key := range license.Msg.Key {
+      decrypter := cipher.NewCBCDecrypter(encryptionKeyCipher, key.Iv)
+      decryptedKey := make([]byte, len(key.Key))
+      decrypter.CryptBlocks(decryptedKey, key.Key)
+      keys = append(keys, Key{
+         ID:    key.Id,
+         Type:  *key.Type,
+         Value: unpad(decryptedKey),
+      })
+   }
 
-	return
+   return
 }
