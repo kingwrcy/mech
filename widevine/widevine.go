@@ -117,12 +117,12 @@ func (m Module) Post(post Poster) (Containers, error) {
 }
 
 func (m Module) signed_request() ([]byte, error) {
-   digest := sha1.Sum(m.license_request)
+   hash := sha1.Sum(m.license_request)
    signature, err := rsa.SignPSS(
       no_operation{},
       m.private_key,
       crypto.SHA1,
-      digest[:],
+      hash[:],
       &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash},
    )
    if err != nil {
@@ -141,32 +141,34 @@ func (m Module) signed_response(response []byte) (Containers, error) {
    if err != nil {
       return nil, err
    }
-   session_key, err := signed_response.Get_Bytes(4)
+   raw_key, err := signed_response.Get_Bytes(4)
    if err != nil {
       return nil, err
    }
-   key, err := rsa.DecryptOAEP(sha1.New(), nil, m.private_key, session_key, nil)
+   session_key, err := rsa.DecryptOAEP(
+      sha1.New(), nil, m.private_key, raw_key, nil,
+   )
    if err != nil {
       return nil, err
    }
    // message
-   var buf []byte
-   buf = append(buf, 1)
-   buf = append(buf, "ENCRYPTION"...)
-   buf = append(buf, 0)
-   buf = append(buf, m.license_request...)
-   buf = append(buf, 0, 0, 0, 0x80)
+   var enc_key []byte
+   enc_key = append(enc_key, 1)
+   enc_key = append(enc_key, "ENCRYPTION"...)
+   enc_key = append(enc_key, 0)
+   enc_key = append(enc_key, m.license_request...)
+   enc_key = append(enc_key, 0, 0, 0, 0x80)
    // CMAC
-   mac, err := cmac.New(aes.NewCipher, key)
+   key_CMAC, err := cmac.New(aes.NewCipher, session_key)
    if err != nil {
       return nil, err
    }
-   mac.Write(buf)
-   block, err := aes.NewCipher(mac.Sum(nil))
+   key_CMAC.Write(enc_key)
+   key_cipher, err := aes.NewCipher(key_CMAC.Sum(nil))
    if err != nil {
       return nil, err
    }
-   var cons Containers
+   var keys Containers
    // .Msg.Key
    for _, message := range signed_response.Get(2).Get_Messages(3) {
       var con Container
@@ -182,11 +184,11 @@ func (m Module) signed_response(response []byte) (Containers, error) {
       if err != nil {
          return nil, err
       }
-      cipher.NewCBCDecrypter(block, iv).CryptBlocks(con.Key, con.Key)
+      cipher.NewCBCDecrypter(key_cipher, iv).CryptBlocks(con.Key, con.Key)
       con.Key = unpad(con.Key)
-      cons = append(cons, con)
+      keys = append(keys, con)
    }
-   return cons, nil
+   return keys, nil
 }
 
 type Poster interface {

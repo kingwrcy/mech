@@ -59,11 +59,11 @@ func Test_Post(t *testing.T) {
       if err != nil {
          t.Fatal(err)
       }
-      mod, err := NewCDM(private_key, client_ID, init_data)
+      mod, err := New_Module(private_key, client_ID, init_data)
       if err != nil {
          t.Fatal(err)
       }
-      req_body, err := mod.GetLicenseRequest()
+      req_body, err := mod.signed_request()
       if err != nil {
          t.Fatal(err)
       }
