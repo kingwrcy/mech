@@ -1,7 +1,6 @@
 package widevine
 
 import (
-   "bytes"
    "crypto"
    "crypto/aes"
    "crypto/cipher"
@@ -12,30 +11,17 @@ import (
    "errors"
    "github.com/aead/cmac"
    "google.golang.org/protobuf/proto"
-   "io"
-   "lukechampine.com/frand"
-   "math"
-   "net/http"
    "time"
 )
 
-// This function retrieves certificate data from a given license server.
-func GetCertData(client *http.Client, licenseURL string) ([]byte, error) {
-   response, err := client.Post(licenseURL, "application/x-www-form-urlencoded", bytes.NewReader([]byte{0x08, 0x04}))
-   if err != nil {
-      return nil, err
-   }
-   defer response.Body.Close()
-   return io.ReadAll(response.Body)
-}
 type CDM struct {
-   privateKey *rsa.PrivateKey
+   
    clientID   []byte
-   sessionID  [32]byte
-
-   widevineCencHeader      WidevineCencHeader
-   signedDeviceCertificate SignedDeviceCertificate
    privacyMode             bool
+   privateKey *rsa.PrivateKey
+   sessionID  [32]byte
+   signedDeviceCertificate SignedDeviceCertificate
+   widevineCencHeader      WidevineCencHeader
 }
 
 type Key struct {
@@ -68,43 +54,11 @@ func NewCDM(privateKey, clientID, initData []byte) (CDM, error) {
    if err := proto.Unmarshal(initData[32:], &widevineCencHeader); err != nil {
       return CDM{}, err
    }
-
-   sessionID := func() (s [32]byte) {
-      c := []byte("ABCDEF0123456789")
-      for i := 0; i < 16; i++ {
-         s[i] = c[frand.Intn(len(c))]
-      }
-      s[16] = '0'
-      s[17] = '1'
-      for i := 18; i < 32; i++ {
-         s[i] = '0'
-      }
-      return s
-   }()
-
    return CDM{
-      privateKey: keyParsed,
       clientID:   clientID,
-
+      privateKey: keyParsed,
       widevineCencHeader: widevineCencHeader,
-
-      sessionID: sessionID,
    }, nil
-}
-
-// Sets a device certificate.  This is makes generating the license request
-// more complicated but is supported.  This is usually not necessary for most
-// Widevine applications.
-func (c *CDM) SetServiceCertificate(certData []byte) error {
-   var message SignedMessage
-   if err := proto.Unmarshal(certData, &message); err != nil {
-      return err
-   }
-   if err := proto.Unmarshal(message.Msg, &c.signedDeviceCertificate); err != nil {
-      return err
-   }
-   c.privacyMode = true
-   return nil
 }
 
 // Generates the license request data.  This is sent to the license server via
@@ -145,73 +99,33 @@ func (c *CDM) GetLicenseRequest() ([]byte, error) {
       v := ProtocolVersion_CURRENT
       licenseRequest.Msg.ProtocolVersion = &v
    }
-
-   {
-      v := uint32(frand.Uint64n(math.MaxUint32))
-      licenseRequest.Msg.KeyControlNonce = &v
+   licenseRequest.Msg.ClientId = new(ClientIdentification)
+   err := proto.Unmarshal(c.clientID, licenseRequest.Msg.ClientId)
+   if err != nil {
+      return nil, err
    }
-
-   if c.privacyMode {
-      pad := func(data []byte, blockSize int) []byte {
-         padlen := blockSize - (len(data) % blockSize)
-         if padlen == 0 {
-            padlen = blockSize
-         }
-         return append(data, bytes.Repeat([]byte{byte(padlen)}, padlen)...)
-      }
-      const blockSize = 16
-
-      var cidKey, cidIV [blockSize]byte
-      frand.Read(cidKey[:])
-      frand.Read(cidIV[:])
-
-      block, err := aes.NewCipher(cidKey[:])
-      if err != nil {
-         return nil, err
-      }
-
-      paddedClientID := pad(c.clientID, blockSize)
-      encryptedClientID := make([]byte, len(paddedClientID))
-      cipher.NewCBCEncrypter(block, cidIV[:]).CryptBlocks(encryptedClientID, paddedClientID)
-
-      servicePublicKey, err := x509.ParsePKCS1PublicKey(c.signedDeviceCertificate.XDeviceCertificate.PublicKey)
-      if err != nil {
-         return nil, err
-      }
-
-      encryptedCIDKey, err := rsa.EncryptOAEP(sha1.New(), frand.Reader, servicePublicKey, cidKey[:], nil)
-      if err != nil {
-         return nil, err
-      }
-
-      licenseRequest.Msg.EncryptedClientId = new(EncryptedClientIdentification)
-      {
-         v := string(c.signedDeviceCertificate.XDeviceCertificate.ServiceId)
-         licenseRequest.Msg.EncryptedClientId.ServiceId = &v
-      }
-      licenseRequest.Msg.EncryptedClientId.ServiceCertificateSerialNumber = c.signedDeviceCertificate.XDeviceCertificate.SerialNumber
-      licenseRequest.Msg.EncryptedClientId.EncryptedClientId = encryptedClientID
-      licenseRequest.Msg.EncryptedClientId.EncryptedClientIdIv = cidIV[:]
-      licenseRequest.Msg.EncryptedClientId.EncryptedPrivacyKey = encryptedCIDKey
-   } else {
-      licenseRequest.Msg.ClientId = new(ClientIdentification)
-      if err := proto.Unmarshal(c.clientID, licenseRequest.Msg.ClientId); err != nil {
-         return nil, err
-      }
-   }
-
    {
       data, err := proto.Marshal(licenseRequest.Msg)
       if err != nil {
          return nil, err
       }
       hash := sha1.Sum(data)
-      if licenseRequest.Signature, err = rsa.SignPSS(frand.Reader, c.privateKey, crypto.SHA1, hash[:], &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}); err != nil {
+      if licenseRequest.Signature, err = rsa.SignPSS(
+         no_operation{},
+         c.privateKey, crypto.SHA1, hash[:],
+         &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash},
+      ); err != nil {
          return nil, err
       }
    }
 
    return proto.Marshal(&licenseRequest)
+}
+
+type no_operation struct{}
+
+func (no_operation) Read(buf []byte) (int, error) {
+   return len(buf), nil
 }
 
 // Retrieves the keys from the license response data.  These keys can be
@@ -230,8 +144,11 @@ func (c *CDM) GetLicenseKeys(licenseRequest []byte, licenseResponse []byte) (key
    if err != nil {
       return
    }
-
-   sessionKey, err := rsa.DecryptOAEP(sha1.New(), frand.Reader, c.privateKey, license.SessionKey, nil)
+   sessionKey, err := rsa.DecryptOAEP(
+      sha1.New(),
+      nil,
+      c.privateKey, license.SessionKey, nil,
+   )
    if err != nil {
       return
    }
