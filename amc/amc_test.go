@@ -14,21 +14,6 @@ const (
    movie
 )
 
-var tests = map[int]struct {
-   address string
-   key string
-   pssh string
-} {
-   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
-   episode: {
-      address: "/shows/orphan-black/episodes/season-1-instinct--1011152",
-      key: "a66a5603545ad206c1a78e160a6710b1",
-      pssh: "AAAAVnBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADYIARIQJqlCz6NjSI2kDWew20wbGRoNd2lkZXZpbmVfdGVzdCIIMTIzNDU2NzgyB2RlZmF1bHQ=",
-   },
-   // amcplus.com/movies/jerry-maguire--1054053
-   movie: {address: "/movies/jerry-maguire--1054053"},
-}
-
 func Test_Content(t *testing.T) {
    home, err := os.UserHomeDir()
    if err != nil {
@@ -78,9 +63,6 @@ func Test_Post(t *testing.T) {
    if err != nil {
       t.Fatal(err)
    }
-   if err := auth.Refresh(); err != nil {
-      t.Fatal(err)
-   }
    play, err := auth.Playback(test.address)
    if err != nil {
       t.Fatal(err)
@@ -90,6 +72,21 @@ func Test_Post(t *testing.T) {
       t.Fatal(err)
    }
    if keys.Content().String() != test.key {
-      t.Fatalf("%+v", keys)
+      t.Fatal(keys)
    }
+}
+
+var tests = map[int]struct {
+   address string
+   key string
+   pssh string
+} {
+   // amcplus.com/shows/orphan-black/episodes/season-1-instinct--1011152
+   episode: {
+      address: "/shows/orphan-black/episodes/season-1-instinct--1011152",
+      key: "95f11e40064f47007e7d950bd52d7b95",
+      pssh: "AAAAVnBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADYIARIQJqlCz6NjSI2kDWew20wbGRoNd2lkZXZpbmVfdGVzdCIIMTIzNDU2NzgyB2RlZmF1bHQ=",
+   },
+   // amcplus.com/movies/jerry-maguire--1054053
+   movie: {address: "/movies/jerry-maguire--1054053"},
 }

@@ -2,7 +2,7 @@
 
 ## Android client
 
-2022-06-15
+2023-02-26
 
 ~~~
 com.bandcamp.android
@@ -32,7 +32,7 @@ IDs for everything. This is the case going back to 2016 at least.
 
 ## Why does this exist?
 
-2022-06-02
+2023-02-26
 
 https://solarfields.bandcamp.com/track/sol-remix-remastered
 

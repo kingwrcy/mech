@@ -2,6 +2,7 @@ package paramount
 
 import (
    "2a.pages.dev/mech/widevine"
+   "encoding/base64"
    "fmt"
    "os"
    "testing"
@@ -21,27 +22,6 @@ type key struct {
    content_type int
 }
 
-var tests = map[key]struct{
-   guid string
-   key string
-   key_ID string
-} {
-   // paramountplus.com/shows/video/rn1zyirVOPjCl8rxopWrhUmJEIs3GcKW
-   {dash_cenc, episode}: {
-      guid: "rn1zyirVOPjCl8rxopWrhUmJEIs3GcKW",
-      key: "f335e480e47739dbcaae7b48faffc002",
-      key_ID: "0f782a6bd2f2466eb9533376ca20ff5f",
-   },
-   // paramountplus.com/movies/video/tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD
-   {dash_cenc, movie}: {guid: "tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD"},
-   // cbs.com/shows/video/YxlqOUdP1zZaIs7FGXCaS1dJi7gGzxG_
-   {hls_clear, episode}: {guid: "YxlqOUdP1zZaIs7FGXCaS1dJi7gGzxG_"},
-   // paramountplus.com/shows/video/622520382
-   {stream_pack, episode}: {guid: "622520382"},
-   // paramountplus.com/movies/video/wQH9yE_y_Dt4ekDYm3yelhhY2KXvOra_
-   {stream_pack, movie}: {guid: "wQH9yE_y_Dt4ekDYm3yelhhY2KXvOra_"},
-}
-
 func Test_Preview(t *testing.T) {
    for _, test := range tests {
       preview, err := New_Preview(test.guid)
@@ -51,6 +31,27 @@ func Test_Preview(t *testing.T) {
       fmt.Printf("%+v\n", preview)
       time.Sleep(time.Second)
    }
+}
+
+var tests = map[key]struct{
+   guid string
+   key string
+   pssh string
+} {
+   // paramountplus.com/shows/video/rn1zyirVOPjCl8rxopWrhUmJEIs3GcKW
+   {dash_cenc, episode}: {
+      guid: "rn1zyirVOPjCl8rxopWrhUmJEIs3GcKW",
+      key: "f335e480e47739dbcaae7b48faffc002",
+      pssh: "AAAAWHBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAADgIARIQD3gqa9LyRm65UzN2yiD/XyIgcm4xenlpclZPUGpDbDhyeG9wV3JoVW1KRUlzM0djS1c4AQ==",
+   },
+   // paramountplus.com/movies/video/tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD
+   {dash_cenc, movie}: {guid: "tQk_Qooh5wUlxQqzj_4LiBO2m4iMrcPD"},
+   // cbs.com/shows/video/YxlqOUdP1zZaIs7FGXCaS1dJi7gGzxG_
+   {hls_clear, episode}: {guid: "YxlqOUdP1zZaIs7FGXCaS1dJi7gGzxG_"},
+   // paramountplus.com/shows/video/622520382
+   {stream_pack, episode}: {guid: "622520382"},
+   // paramountplus.com/movies/video/wQH9yE_y_Dt4ekDYm3yelhhY2KXvOra_
+   {stream_pack, movie}: {guid: "wQH9yE_y_Dt4ekDYm3yelhhY2KXvOra_"},
 }
 
 func Test_Post(t *testing.T) {
@@ -67,11 +68,11 @@ func Test_Post(t *testing.T) {
       t.Fatal(err)
    }
    test := tests[key{dash_cenc, episode}]
-   key_ID, err := widevine.Key_ID(test.key_ID)
+   pssh, err := base64.StdEncoding.DecodeString(test.pssh)
    if err != nil {
       t.Fatal(err)
    }
-   mod, err := widevine.New_Module(private_key, client_ID, key_ID)
+   mod, err := widevine.New_Module(private_key, client_ID, pssh)
    if err != nil {
       t.Fatal(err)
    }

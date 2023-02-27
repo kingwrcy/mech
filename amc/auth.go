@@ -10,6 +10,14 @@ import (
    "strings"
 )
 
+func (a Auth) Create(name string) error {
+   indent, err := json.MarshalIndent(a, "", " ")
+   if err != nil {
+      return err
+   }
+   return os.WriteFile(name, indent, os.ModePerm)
+}
+
 func (a Auth) Playback(ref string) (*Playback, error) {
    _, nID, found := strings.Cut(ref, "--")
    if !found {
@@ -94,15 +102,6 @@ type Auth struct {
       Access_Token string
       Refresh_Token string
    }
-}
-
-func (a Auth) Create(name string) error {
-   file, err := os.Create(name)
-   if err != nil {
-      return err
-   }
-   defer file.Close()
-   return json.NewEncoder(file).Encode(a)
 }
 
 func Open_Auth(name string) (*Auth, error) {
