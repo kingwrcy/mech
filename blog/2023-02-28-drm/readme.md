@@ -1,7 +1,7 @@
 # DRM
 
 ~~~
-drm in:comments updated:>2023-01-24
+drm in:comments updated:>2023-01-28
 ~~~
 
 - https://github.com/yt-dlp/yt-dlp

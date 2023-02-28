@@ -8,6 +8,39 @@ import (
    "strconv"
 )
 
+func (f Format) Encode(w io.Writer) error {
+   req, err := http.NewRequest("GET", f.URL, nil)
+   if err != nil {
+      return err
+   }
+   val := req.URL.Query()
+   if err != nil {
+      return err
+   }
+   pro := http.Progress_Bytes(w, f.Content_Length)
+   var pos int64
+   for pos < f.Content_Length {
+      var b []byte
+      b = strconv.AppendInt(b, pos, 10)
+      b = append(b, '-')
+      b = strconv.AppendInt(b, pos+chunk-1, 10)
+      val.Set("range", string(b))
+      req.URL.RawQuery = val.Encode()
+      res, err := HTTP_Client.Level(0).Do(req)
+      if err != nil {
+         return err
+      }
+      if _, err := io.Copy(pro, res.Body); err != nil {
+         return err
+      }
+      if err := res.Body.Close(); err != nil {
+         return err
+      }
+      pos += chunk
+   }
+   return nil
+}
+
 func (f Format) MarshalText() ([]byte, error) {
    b := []byte("Quality:")
    if f.Quality_Label != "" {
@@ -27,34 +60,6 @@ func (f Format) MarshalText() ([]byte, error) {
 }
 
 const chunk = 10_000_000
-
-func (f Format) Encode(w io.Writer) error {
-   req, err := http.NewRequest("GET", f.URL, nil)
-   if err != nil {
-      return err
-   }
-   pro := http.Progress_Bytes(w, f.Content_Length)
-   var pos int64
-   for pos < f.Content_Length {
-      b := []byte("bytes=")
-      b = strconv.AppendInt(b, pos, 10)
-      b = append(b, '-')
-      b = strconv.AppendInt(b, pos+chunk-1, 10)
-      req.Header.Set("Range", string(b))
-      res, err := HTTP_Client.Level(0).Redirect(nil).Status(206).Do(req)
-      if err != nil {
-         return err
-      }
-      if _, err := io.Copy(pro, res.Body); err != nil {
-         return err
-      }
-      if err := res.Body.Close(); err != nil {
-         return err
-      }
-      pos += chunk
-   }
-   return nil
-}
 
 func (f Format) Ext() (string, error) {
    media, _, err := mime.ParseMediaType(f.MIME_Type)
