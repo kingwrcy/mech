@@ -1,4 +1,4 @@
-module 2a.pages.dev/mech
+module github.com/kingwrcy/mech
 
 go 1.20
 
