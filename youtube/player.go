@@ -82,6 +82,7 @@ type Player struct {
 	Playability_Status Status `json:"playabilityStatus"`
 	Streaming_Data     struct {
 		Adaptive_Formats Formats `json:"adaptiveFormats"`
+		Formats Formats `json:"formats"`
 	} `json:"streamingData"`
 	Video_Details struct {
 		Author            string
